@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ config.branding.title }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            primary: '{{ config.branding.color }}',
+                            surface: '#F8FAFC',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body class="font-sans text-gray-900 antialiased bg-white h-screen overflow-hidden flex flex-col">
+    <!-- Top header bar -->
+    <header class="h-11 border-b border-gray-200 bg-white flex items-center justify-between px-4 shrink-0">
+        <div class="flex items-center gap-4">
+            <span class="font-semibold text-sm tracking-wide" style="color:{{ config.branding.color }}">{{ config.branding.title }}</span>
+            <!-- Tabs -->
+            <nav class="flex gap-1">
+                <button id="tab-docs" class="tab-btn active" data-tab="docs">Docs</button>
+                {% if config.github.repo %}
+                <button id="tab-issues" class="tab-btn" data-tab="issues">Issues</button>
+                {% endif %}
+            </nav>
+        </div>
+        <div class="flex items-center gap-3">
+            {% if session.get('user') %}
+            <span class="text-xs text-gray-400">{{ session['user']['email'] }}</span>
+            {% if session['user'].get('role') == 'admin' %}
+            <a href="{{ url_for('auth.admin') }}" class="text-xs text-gray-400 hover:text-gray-600">Admin</a>
+            {% endif %}
+            <a href="{{ url_for('auth.logout') }}" class="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+                Logout
+            </a>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- DOCS TAB -->
+    <div id="panel-docs" class="tab-panel flex flex-1 min-h-0">
+        <!-- File tree sidebar -->
+        <aside class="w-60 border-r border-gray-200 bg-brand-surface flex flex-col shrink-0">
+            <div id="tree" class="flex-1 overflow-y-auto p-2 text-sm"></div>
+        </aside>
+
+        <!-- Markdown viewer -->
+        <main class="flex-1 flex flex-col min-w-0">
+            <!-- Frontmatter bar -->
+            <div id="fm-bar" class="border-b border-gray-200 px-6 py-3 bg-white hidden">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <h1 id="fm-title" class="text-lg font-semibold text-gray-900"></h1>
+                        <span id="fm-status" class="text-xs px-2 py-0.5 rounded-full font-medium hidden"></span>
+                    </div>
+                    {% if config.github.repo %}
+                    <a id="fm-edit" href="#" target="_blank"
+                       class="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 shrink-0">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Edit on GitHub
+                    </a>
+                    {% endif %}
+                </div>
+                <p id="fm-summary" class="text-sm text-gray-500 mt-1 hidden"></p>
+                <p id="fm-path" class="text-xs text-gray-400 mt-1 font-mono"></p>
+            </div>
+            <!-- Doc content -->
+            <div id="viewer" class="flex-1 overflow-y-auto px-8 py-6">
+                <div id="viewer-empty" class="flex items-center justify-center h-full">
+                    <p class="text-sm text-gray-400">Select a document from the tree.</p>
+                </div>
+                <article id="viewer-content" class="prose prose-sm max-w-none hidden"></article>
+            </div>
+        </main>
+    </div>
+
+    <!-- ISSUES TAB -->
+    {% if config.github.repo %}
+    <div id="panel-issues" class="tab-panel hidden flex flex-col flex-1 min-h-0">
+        <!-- Filters bar -->
+        <div class="border-b border-gray-200 px-6 py-3 bg-white flex items-center gap-3 shrink-0">
+            <select id="issues-state" class="text-sm border border-gray-300 rounded px-2 py-1">
+                <option value="open">Open</option>
+                <option value="closed">Closed</option>
+                <option value="all">All</option>
+            </select>
+            <select id="issues-label" class="text-sm border border-gray-300 rounded px-2 py-1">
+                <option value="">All labels</option>
+            </select>
+            <select id="issues-milestone" class="text-sm border border-gray-300 rounded px-2 py-1">
+                <option value="">All milestones</option>
+            </select>
+            <button id="issues-refresh" class="text-xs text-gray-500 hover:text-gray-700 ml-auto">Refresh</button>
+        </div>
+        <!-- Issues list -->
+        <div id="issues-list" class="flex-1 overflow-y-auto px-6 py-4">
+            <div class="text-sm text-gray-400 text-center py-8">Loading issues...</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+        window.renderMermaidDiagrams = async function() {
+            const codeBlocks = document.querySelectorAll('#viewer-content pre code.language-mermaid');
+            for (const block of codeBlocks) {
+                const pre = block.parentElement;
+                const container = document.createElement('div');
+                container.className = 'mermaid';
+                container.textContent = block.textContent;
+                pre.replaceWith(container);
+            }
+            if (document.querySelectorAll('.mermaid').length) {
+                await mermaid.run({ querySelector: '.mermaid' });
+            }
+        };
+    </script>
+    <script>
+        const BRAND_COLOR = {{ config.branding.color | tojson }};
+        const GITHUB_REPO = {{ config.github.repo | tojson }};
+        const GITHUB_EDIT_BASE = GITHUB_REPO ? `https://github.com/${GITHUB_REPO}/edit/main/` : '';
+    </script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

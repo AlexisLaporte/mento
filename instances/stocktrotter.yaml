@@ -1,0 +1,14 @@
+name: StockTrotter
+base_path: /data/projects/stocktrotter
+docs_paths: [docs]
+allowed_files: [CLAUDE.md]
+github:
+  repo: AlexisLaporte/stock-central
+  token_env: GITHUB_TOKEN
+auth:
+  allowed_domains: [otomata.tech]
+  allowed_emails: [pierrick.ramirez@gmail.com]
+  initial_admin: alexis@otomata.tech
+branding:
+  color: "#F59E0B"
+  title: StockTrotter
