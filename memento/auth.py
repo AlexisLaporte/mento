@@ -203,7 +203,9 @@ def login():
         session['user'] = {'email': 'dev@local', 'name': 'Dev', 'picture': ''}
         next_url = request.args.get('next', '/')
         return redirect(next_url)
-    session['next'] = request.args.get('next', '/')
+    # Preserve next URL from requires_access if not overridden by query param
+    next_url = request.args.get('next') or session.get('next', '/')
+    session['next'] = next_url
     redirect_uri = url_for('auth.callback', _external=True)
     prompt = 'select_account' if session.pop('force_prompt', False) else None
     kwargs = {}
