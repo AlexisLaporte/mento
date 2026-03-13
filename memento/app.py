@@ -118,24 +118,81 @@ def _dev_config(project: str):
 def _welcome_page():
     return '''<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Memento</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; margin: 0;
-  min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-.card { text-align: center; }
-.title { color: #374151; font-size: 1.5rem; font-weight: 600; letter-spacing: 0.025em; }
-.sub { color: #9ca3af; font-size: 0.875rem; margin: 0.75rem 0 2rem; }
-.btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.5rem;
-  background: #fff; border: 1px solid #e5e7eb; border-radius: 0.5rem; color: #374151;
-  font-size: 0.875rem; text-decoration: none; transition: all 0.15s; }
-.btn:hover { border-color: #333; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-</style></head>
-<body><div class="card">
-<div class="title">Memento</div>
-<p class="sub">Documentation portal</p>
-<a href="/auth/login?next=/" class="btn">Sign in</a>
-</div></body></html>'''
+<title>Memento — Documentation portal for your team</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body { font-family: 'Inter', system-ui, sans-serif; }</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<!-- Nav -->
+<nav class="max-w-4xl mx-auto flex justify-between items-center px-6 py-6">
+    <span class="text-lg font-bold text-gray-900 tracking-tight">Memento</span>
+    <a href="/auth/login?next=/" class="text-sm font-medium text-white bg-indigo-500 px-4 py-2 rounded-lg hover:bg-indigo-600 transition">Sign in</a>
+</nav>
+
+<!-- Hero -->
+<section class="max-w-4xl mx-auto px-6 pt-16 pb-20 text-center">
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">Your docs, always accessible</h1>
+    <p class="text-lg text-gray-500 max-w-2xl mx-auto mb-8">
+        Memento turns your GitHub markdown into a clean documentation portal.
+        Invite your team, control access, and let AI read your docs too.
+    </p>
+    <a href="/auth/login?next=/" class="inline-flex items-center gap-2 text-sm font-medium text-white bg-indigo-500 px-6 py-3 rounded-lg hover:bg-indigo-600 transition">
+        Get started
+    </a>
+</section>
+
+<!-- Features -->
+<section class="max-w-4xl mx-auto px-6 pb-20">
+    <div class="grid md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-xl p-6 shadow-sm">
+            <div class="text-2xl mb-3">&#128194;</div>
+            <h3 class="font-semibold text-gray-900 mb-1">GitHub-powered</h3>
+            <p class="text-sm text-gray-500">Connect a GitHub repo and Memento renders your markdown docs with a clean UI. No build step, no config files.</p>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow-sm">
+            <div class="text-2xl mb-3">&#128101;</div>
+            <h3 class="font-semibold text-gray-900 mb-1">Team access control</h3>
+            <p class="text-sm text-gray-500">Invite members by email, allow entire domains, and manage roles. Each project has its own permissions.</p>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow-sm">
+            <div class="text-2xl mb-3">&#129302;</div>
+            <h3 class="font-semibold text-gray-900 mb-1">AI-ready via MCP</h3>
+            <p class="text-sm text-gray-500">Connect Claude AI to your docs with one URL. Your team can query documentation directly from claude.ai.</p>
+        </div>
+    </div>
+</section>
+
+<!-- How it works -->
+<section class="max-w-4xl mx-auto px-6 pb-20">
+    <h2 class="text-xl font-bold text-gray-900 mb-6 text-center">How it works</h2>
+    <div class="grid md:grid-cols-4 gap-4">
+        <div class="text-center">
+            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 font-bold text-sm flex items-center justify-center mx-auto mb-2">1</div>
+            <p class="text-sm text-gray-600">Sign in and create a project</p>
+        </div>
+        <div class="text-center">
+            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 font-bold text-sm flex items-center justify-center mx-auto mb-2">2</div>
+            <p class="text-sm text-gray-600">Pick a GitHub repo with markdown docs</p>
+        </div>
+        <div class="text-center">
+            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 font-bold text-sm flex items-center justify-center mx-auto mb-2">3</div>
+            <p class="text-sm text-gray-600">Invite your team by email or domain</p>
+        </div>
+        <div class="text-center">
+            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 font-bold text-sm flex items-center justify-center mx-auto mb-2">4</div>
+            <p class="text-sm text-gray-600">Browse docs on the web or via Claude AI</p>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="max-w-4xl mx-auto px-6 py-8 border-t border-gray-200 text-center">
+    <p class="text-xs text-gray-400">Memento &mdash; open source on <a href="https://github.com/AlexisLaporte/memento" class="hover:text-gray-600 underline" target="_blank">GitHub</a></p>
+</footer>
+
+</body></html>'''
 
 
 def _dashboard_page(configs, user):
