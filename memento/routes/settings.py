@@ -105,6 +105,35 @@ def settings_page():
         </form>
     </div>
     {delete_btn}
+    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <h2 class="text-sm font-semibold text-gray-900 mb-3">Claude AI connector (MCP)</h2>
+        <p class="text-sm text-gray-600 mb-3">
+            Members can access this project's documentation directly from
+            <a href="https://claude.ai" class="text-indigo-600 hover:underline" target="_blank">claude.ai</a>
+            using the MCP connector.
+        </p>
+        <div class="bg-gray-50 rounded p-3 space-y-2">
+            <div>
+                <span class="text-xs text-gray-500">1. In claude.ai, go to</span>
+                <span class="text-xs font-medium text-gray-700">Settings &gt; Connectors &gt; Add</span>
+            </div>
+            <div>
+                <span class="text-xs text-gray-500">2. Paste this URL:</span>
+                <code class="block mt-1 text-xs bg-white border rounded px-3 py-2 select-all text-gray-800">https://mcp.memento.otomata.tech/mcp</code>
+            </div>
+            <div>
+                <span class="text-xs text-gray-500">3. Authenticate with your email when prompted</span>
+            </div>
+            <div>
+                <span class="text-xs text-gray-500">4. Claude can now use</span>
+                <code class="text-xs text-indigo-600">list_projects</code>,
+                <code class="text-xs text-indigo-600">read_doc</code>,
+                <code class="text-xs text-indigo-600">get_doc_tree</code>,
+                <code class="text-xs text-indigo-600">list_issues</code>
+            </div>
+        </div>
+    </div>
+    {delete_btn}
 </div></body></html>'''
 
 
