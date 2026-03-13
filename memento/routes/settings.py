@@ -1,6 +1,6 @@
 """Per-project settings: user management + project config."""
 
-from flask import Blueprint, g, redirect, request, url_for
+from flask import Blueprint, g, redirect, request, session, url_for
 
 from .. import db
 from ..auth import requires_admin
@@ -144,6 +144,9 @@ def invite():
     name = request.form.get('name', '').strip()
     if email:
         db.invite_member(g.project, email, name)
+        from ..email import send_invite_email
+        invited_by = session.get('user', {}).get('email', 'an admin')
+        send_invite_email(email, name, g.config.title, g.project, invited_by)
     return redirect(url_for('settings.settings_page', project=g.project))
 
 
@@ -156,7 +159,6 @@ def set_role(email):
 
 
 def _is_owner() -> bool:
-    from flask import session
     user = session.get('user')
     if not user:
         return False
