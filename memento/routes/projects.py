@@ -92,7 +92,9 @@ def create_project_route():
     user = session['user']
     slug = request.form.get('slug', '').strip().lower().replace(' ', '-')
     title = request.form.get('title', '').strip()
-    repo_full_name = request.form.get('repo', '').strip()
+    repo_raw = request.form.get('repo', '').strip()
+    # Accept full URLs like https://github.com/owner/repo
+    repo_full_name = repo_raw.replace('https://github.com/', '').replace('http://github.com/', '').strip('/')
 
     if not slug or not title or not repo_full_name or '/' not in repo_full_name:
         abort(400)
