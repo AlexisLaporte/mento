@@ -1,12 +1,14 @@
-"""Documentation file tree and markdown viewer routes."""
+"""Documentation file tree and markdown viewer — reads from GitHub Contents API."""
 
-from pathlib import Path
+import base64
 
 import markdown
 import yaml
-from flask import Blueprint, g, jsonify, render_template, session
+from flask import Blueprint, g, jsonify, render_template
+from httpx import HTTPStatusError
 
 from ..auth import requires_access
+from ..github_app import github_api
 
 docs_bp = Blueprint('docs', __name__)
 
@@ -33,73 +35,80 @@ def index(doc_path=None):
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
-def _base_path():
-    return Path(g.config.base_path).resolve()
-
-
-def _safe_path(relative: str) -> Path | None:
-    """Resolve a relative path under base, return None if traversal detected."""
-    base = _base_path()
-    target = (base / relative).resolve()
-    if not str(target).startswith(str(base)):
-        return None
-    rel = target.relative_to(base)
-    parts = rel.parts
+def _is_allowed(path: str, docs_paths: list[str], allowed_files: list[str]) -> bool:
+    """Check if a path is under docs_paths or is an allowed root file."""
+    parts = path.split('/')
     if not parts:
-        return None
-    root = parts[0]
-    if root in g.config.docs_paths:
-        return target
-    if len(parts) == 1 and root in g.config.allowed_files:
-        return target
-    return None
+        return False
+    if parts[0] in docs_paths:
+        return True
+    if len(parts) == 1 and parts[0] in allowed_files:
+        return True
+    return False
 
 
-def _build_tree() -> list[dict]:
-    """Build a JSON-serializable file tree for configured paths."""
-    base = _base_path()
-    tree = []
-    for root_name in sorted(g.config.docs_paths):
-        root_path = base / root_name
-        if not root_path.is_dir():
+def _build_tree(items: list[dict], docs_paths: list[str], allowed_files: list[str]) -> list[dict]:
+    """Build a nested tree from GitHub git/trees flat list."""
+    # Filter to allowed paths and markdown files (+ directories)
+    filtered = []
+    for item in items:
+        if not _is_allowed(item['path'], docs_paths, allowed_files):
             continue
-        node = _dir_node(root_path, base)
-        if node:
-            tree.append(node)
-    for filename in sorted(g.config.allowed_files):
-        fp = base / filename
-        if fp.is_file():
-            tree.append({"name": filename, "path": filename, "type": "file"})
-    return tree
+        if item['type'] == 'blob':
+            if item['path'].lower().endswith(('.md', '.markdown')):
+                filtered.append(item)
+        elif item['type'] == 'tree':
+            filtered.append(item)
 
+    # Build nested structure
+    root: list[dict] = []
+    dirs: dict[str, dict] = {}
 
-def _dir_node(dir_path: Path, base: Path) -> dict | None:
-    """Recursively build a directory node."""
-    children = []
-    try:
-        for entry in sorted(dir_path.iterdir(), key=lambda e: (not e.is_dir(), e.name.lower())):
-            if entry.name.startswith('.'):
-                continue
-            if entry.is_dir():
-                child = _dir_node(entry, base)
-                if child:
-                    children.append(child)
-            elif entry.suffix.lower() in ('.md', '.markdown'):
-                children.append({
-                    "name": entry.name,
-                    "path": str(entry.relative_to(base)),
-                    "type": "file",
-                })
-    except PermissionError:
-        return None
-    if not children:
-        return None
-    return {
-        "name": dir_path.name,
-        "path": str(dir_path.relative_to(base)),
-        "type": "dir",
-        "children": children,
-    }
+    # First pass: create all directory nodes
+    for item in filtered:
+        if item['type'] == 'tree':
+            name = item['path'].split('/')[-1]
+            node = {"name": name, "path": item['path'], "type": "dir", "children": []}
+            dirs[item['path']] = node
+
+    # Second pass: add files and wire up children
+    for item in filtered:
+        name = item['path'].split('/')[-1]
+        if item['type'] == 'blob':
+            file_node = {"name": name, "path": item['path'], "type": "file"}
+            parent_path = '/'.join(item['path'].split('/')[:-1])
+            if parent_path in dirs:
+                dirs[parent_path]['children'].append(file_node)
+            else:
+                root.append(file_node)
+        elif item['type'] == 'tree':
+            parent_path = '/'.join(item['path'].split('/')[:-1])
+            if parent_path in dirs:
+                dirs[parent_path]['children'].append(dirs[item['path']])
+            else:
+                root.append(dirs[item['path']])
+
+    # Remove empty directories
+    def prune(nodes: list[dict]) -> list[dict]:
+        result = []
+        for node in nodes:
+            if node['type'] == 'dir':
+                node['children'] = prune(node['children'])
+                if node['children']:
+                    result.append(node)
+            else:
+                result.append(node)
+        return result
+
+    # Sort: dirs first, then alpha
+    def sort_tree(nodes: list[dict]) -> list[dict]:
+        nodes.sort(key=lambda n: (n['type'] != 'dir', n['name'].lower()))
+        for n in nodes:
+            if n['type'] == 'dir':
+                sort_tree(n['children'])
+        return nodes
+
+    return sort_tree(prune(root))
 
 
 def _parse_frontmatter(text: str) -> tuple[dict, str]:
@@ -127,18 +136,46 @@ def _render_markdown(text: str) -> str:
 @docs_bp.route('/api/tree')
 @requires_access
 def api_tree():
-    return jsonify(_build_tree())
+    config = g.config
+    if not config.repo_full_name or not config.installation_id:
+        return jsonify([])
+
+    try:
+        tree_data = github_api(
+            config.installation_id,
+            f'/repos/{config.repo_full_name}/git/trees/{config.default_branch}',
+            params={'recursive': '1'},
+        )
+    except HTTPStatusError as e:
+        return jsonify({"error": f"GitHub API error: {e.response.status_code}"}), 502
+
+    nodes = _build_tree(tree_data.get('tree', []), config.docs_paths, config.allowed_files)
+    return jsonify(nodes)
 
 
 @docs_bp.route('/api/doc/<path:doc_path>')
 @requires_access
 def api_doc(doc_path: str):
-    target = _safe_path(doc_path)
-    if not target or not target.is_file():
+    config = g.config
+
+    if not config.repo_full_name or not config.installation_id:
+        return jsonify({"error": "Repo not configured"}), 400
+
+    if not _is_allowed(doc_path, config.docs_paths, config.allowed_files):
         return jsonify({"error": "Not found"}), 404
 
-    text = target.read_text(errors='replace')
-    fm, body = _parse_frontmatter(text)
+    try:
+        data = github_api(
+            config.installation_id,
+            f'/repos/{config.repo_full_name}/contents/{doc_path}',
+        )
+    except HTTPStatusError as e:
+        if e.response.status_code == 404:
+            return jsonify({"error": "Not found"}), 404
+        return jsonify({"error": f"GitHub API error: {e.response.status_code}"}), 502
+
+    content = base64.b64decode(data['content']).decode('utf-8', errors='replace')
+    fm, body = _parse_frontmatter(content)
     html = _render_markdown(body)
 
     return jsonify({"path": doc_path, "frontmatter": fm, "html": html})

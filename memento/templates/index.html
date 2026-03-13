@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ config.branding.title }}</title>
+    <title>{{ config.title }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,7 +14,7 @@
                     fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
                     colors: {
                         brand: {
-                            primary: '{{ config.branding.color }}',
+                            primary: '{{ config.color }}',
                             surface: '#F8FAFC',
                         }
                     }
@@ -28,11 +28,11 @@
     <!-- Top header bar -->
     <header class="h-11 border-b border-gray-200 bg-white flex items-center justify-between px-4 shrink-0">
         <div class="flex items-center gap-4">
-            <a href="/{{ project_slug }}/" class="font-semibold text-sm tracking-wide no-underline" style="color:{{ config.branding.color }}">{{ config.branding.title }}</a>
+            <a href="/{{ project_slug }}/" class="font-semibold text-sm tracking-wide no-underline" style="color:{{ config.color }}">{{ config.title }}</a>
             <!-- Tabs -->
             <nav class="flex gap-1">
                 <button id="tab-docs" class="tab-btn active" data-tab="docs">Docs</button>
-                {% if config.github.repo %}
+                {% if config.repo_full_name %}
                 <button id="tab-issues" class="tab-btn" data-tab="issues">Issues</button>
                 {% endif %}
             </nav>
@@ -41,7 +41,7 @@
             {% if session.get('user') %}
             <span class="text-xs text-gray-400">{{ session['user']['email'] }}</span>
             {% if user_role == 'admin' %}
-            <a href="/{{ project_slug }}/admin" class="text-xs text-gray-400 hover:text-gray-600">Admin</a>
+            <a href="/{{ project_slug }}/settings" class="text-xs text-gray-400 hover:text-gray-600">Settings</a>
             {% endif %}
             <a href="{{ url_for('auth.logout') }}" class="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,7 +69,7 @@
                         <h1 id="fm-title" class="text-lg font-semibold text-gray-900"></h1>
                         <span id="fm-status" class="text-xs px-2 py-0.5 rounded-full font-medium hidden"></span>
                     </div>
-                    {% if config.github.repo %}
+                    {% if config.repo_full_name %}
                     <a id="fm-edit" href="#" target="_blank"
                        class="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 shrink-0">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -93,7 +93,7 @@
     </div>
 
     <!-- ISSUES TAB -->
-    {% if config.github.repo %}
+    {% if config.repo_full_name %}
     <div id="panel-issues" class="tab-panel hidden flex flex-col flex-1 min-h-0">
         <!-- Filters bar -->
         <div class="border-b border-gray-200 px-6 py-3 bg-white flex items-center gap-3 shrink-0">
@@ -135,9 +135,10 @@
         };
     </script>
     <script>
-        const BRAND_COLOR = {{ config.branding.color | tojson }};
-        const GITHUB_REPO = {{ config.github.repo | tojson }};
-        const GITHUB_EDIT_BASE = GITHUB_REPO ? `https://github.com/${GITHUB_REPO}/edit/main/` : '';
+        const BRAND_COLOR = {{ config.color | tojson }};
+        const GITHUB_REPO = {{ config.repo_full_name | tojson }};
+        const GITHUB_BRANCH = {{ config.default_branch | tojson }};
+        const GITHUB_EDIT_BASE = GITHUB_REPO ? `https://github.com/${GITHUB_REPO}/edit/${GITHUB_BRANCH}/` : '';
         const PROJECT_SLUG = {{ project_slug | tojson }};
     </script>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
