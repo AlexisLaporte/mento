@@ -49,7 +49,7 @@ export function DocViewer({ doc, editBaseUrl }: { doc: DocData | null; editBaseU
   const title = fm.title || doc.path.split('/').pop()?.replace(/\.md$/, '') || ''
 
   return (
-    <div className="flex-1 overflow-y-auto p-6">
+    <div className="flex-1 overflow-y-auto px-4 py-4 md:p-6">
       {/* Frontmatter bar */}
       <div className="mb-4 pb-3 border-b">
         <div className="flex items-center gap-2 flex-wrap">

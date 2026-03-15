@@ -89,7 +89,7 @@ export default function WelcomePage() {
         <div className="absolute inset-0 bg-gradient-to-r from-foreground/80 via-foreground/50 to-transparent" />
 
         {/* Nav overlaid */}
-        <nav className="absolute top-0 left-0 right-0 z-20 max-w-6xl mx-auto flex justify-between items-center px-8 py-6">
+        <nav className="absolute top-0 left-0 right-0 z-20 max-w-6xl mx-auto flex justify-between items-center px-4 sm:px-8 py-4 sm:py-6">
           <a href="/" className="flex items-center gap-3">
             <img src="/logo-book.svg" alt="Memento" className="h-10 w-10 brightness-0 invert" />
             <span className="text-xl font-bold tracking-tight font-serif text-white">Memento</span>
@@ -103,7 +103,7 @@ export default function WelcomePage() {
         </nav>
 
         {/* Hero content */}
-        <div className="relative z-10 max-w-6xl mx-auto px-8 py-32">
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-8 py-20 sm:py-32">
           <motion.p
             variants={fadeUp} initial="hidden" animate="visible" custom={0}
             className="text-sm font-medium text-white/70 mb-4 tracking-wide uppercase"
@@ -154,7 +154,7 @@ export default function WelcomePage() {
 
       {/* Stats */}
       <section className="border-y border-foreground/[0.06]">
-        <div className="max-w-6xl mx-auto px-8 py-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((s, i) => (
               <motion.div
@@ -173,7 +173,7 @@ export default function WelcomePage() {
       </section>
 
       {/* Features */}
-      <section id="features" className="max-w-6xl mx-auto px-8 py-24 md:py-32">
+      <section id="features" className="max-w-6xl mx-auto px-4 sm:px-8 py-24 md:py-32">
         <motion.p
           variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
           className="text-sm font-medium text-muted-foreground mb-3 tracking-wide uppercase"
@@ -213,10 +213,10 @@ export default function WelcomePage() {
       </section>
 
       {/* Divider */}
-      <div className="max-w-6xl mx-auto px-8"><div className="h-px bg-foreground/[0.06]" /></div>
+      <div className="max-w-6xl mx-auto px-4 sm:px-8"><div className="h-px bg-foreground/[0.06]" /></div>
 
       {/* How it works */}
-      <section className="max-w-6xl mx-auto px-8 py-24 md:py-32">
+      <section className="max-w-6xl mx-auto px-4 sm:px-8 py-24 md:py-32">
         <motion.p
           variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
           className="text-sm font-medium text-muted-foreground mb-3 tracking-wide uppercase"
@@ -231,12 +231,12 @@ export default function WelcomePage() {
           Four steps. Five minutes.
         </motion.h2>
 
-        <div className="grid md:grid-cols-4 gap-0">
+        <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-0">
           {steps.map((s, i) => (
             <motion.div
               key={s.num}
               variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i}
-              className="relative p-6 border-l border-foreground/[0.06] first:border-l-0"
+              className="relative p-6 md:border-l border-b md:border-b-0 border-foreground/[0.06] first:border-l-0 last:border-b-0"
             >
               <span className="text-5xl font-bold text-primary/15 font-serif">{s.num}</span>
               <h3 className="font-semibold mt-2 mb-2">{s.title}</h3>
@@ -247,10 +247,10 @@ export default function WelcomePage() {
       </section>
 
       {/* Divider */}
-      <div className="max-w-6xl mx-auto px-8"><div className="h-px bg-foreground/[0.06]" /></div>
+      <div className="max-w-6xl mx-auto px-4 sm:px-8"><div className="h-px bg-foreground/[0.06]" /></div>
 
       {/* Use cases */}
-      <section className="max-w-6xl mx-auto px-8 py-24 md:py-32">
+      <section className="max-w-6xl mx-auto px-4 sm:px-8 py-24 md:py-32">
         <motion.p
           variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
           className="text-sm font-medium text-muted-foreground mb-3 tracking-wide uppercase"
@@ -282,7 +282,7 @@ export default function WelcomePage() {
       </section>
 
       {/* CTA */}
-      <section className="max-w-6xl mx-auto px-8 py-16 md:py-24">
+      <section className="max-w-6xl mx-auto px-4 sm:px-8 py-16 md:py-24">
         <motion.div
           variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
           className="relative rounded-3xl overflow-hidden"
@@ -308,7 +308,7 @@ export default function WelcomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="max-w-6xl mx-auto px-8 py-8 border-t border-foreground/[0.06]">
+      <footer className="max-w-6xl mx-auto px-4 sm:px-8 py-8 border-t border-foreground/[0.06]">
         <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <img src="/logo-book.svg" alt="Memento" className="h-5 w-5" />

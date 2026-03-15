@@ -63,56 +63,98 @@ export function IssuesTable({ projectBase }: { projectBase: string }) {
         <Button variant="ghost" size="sm" onClick={() => refetch()}>Refresh</Button>
       </div>
 
-      {/* Table */}
+      {/* Content */}
       {isLoading ? (
         <p className="text-sm text-muted-foreground text-center py-8">Loading...</p>
       ) : !issues?.length ? (
         <p className="text-sm text-muted-foreground text-center py-8">No issues found.</p>
       ) : (
-        <table className="w-full text-sm">
-          <thead className="text-xs text-muted-foreground uppercase border-b">
-            <tr>
-              <th className="text-left py-2 px-2 w-16">#</th>
-              <th className="text-left py-2 px-2">Title</th>
-              <th className="text-left py-2 px-2 w-32">Labels</th>
-              <th className="text-left py-2 px-2 w-24">Assignee</th>
-              <th className="text-left py-2 px-2 w-28">Updated</th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs text-muted-foreground uppercase border-b">
+                <tr>
+                  <th className="text-left py-2 px-2 w-16">#</th>
+                  <th className="text-left py-2 px-2">Title</th>
+                  <th className="text-left py-2 px-2 w-32">Labels</th>
+                  <th className="text-left py-2 px-2 w-24">Assignee</th>
+                  <th className="text-left py-2 px-2 w-28">Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {issues.map(issue => (
+                  <tr
+                    key={issue.number}
+                    onClick={() => window.open(issue.url, '_blank')}
+                    className="border-b hover:bg-accent cursor-pointer"
+                  >
+                    <td className="py-2 px-2 text-muted-foreground">
+                      <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${issue.state === 'open' ? 'bg-green-500' : 'bg-purple-500'}`} />
+                      {issue.number}
+                    </td>
+                    <td className="py-2 px-2 font-medium">
+                      {issue.title}
+                      {issue.comments > 0 && <span className="text-xs text-muted-foreground ml-1">{issue.comments}</span>}
+                    </td>
+                    <td className="py-2 px-2">
+                      {issue.labels.map(l => (
+                        <span
+                          key={l.name}
+                          className="inline-block text-xs px-1.5 py-0.5 rounded-full mr-1"
+                          style={{ background: `#${l.color}20`, color: `#${l.color}`, border: `1px solid #${l.color}40` }}
+                        >
+                          {l.name}
+                        </span>
+                      ))}
+                    </td>
+                    <td className="py-2 px-2 text-muted-foreground">{issue.assignee || ''}</td>
+                    <td className="py-2 px-2 text-muted-foreground">
+                      {new Date(issue.updated_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card list */}
+          <div className="md:hidden space-y-2">
             {issues.map(issue => (
-              <tr
+              <div
                 key={issue.number}
                 onClick={() => window.open(issue.url, '_blank')}
-                className="border-b hover:bg-accent cursor-pointer"
+                className="border rounded-lg p-3 hover:bg-accent cursor-pointer"
               >
-                <td className="py-2 px-2 text-muted-foreground">
-                  <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${issue.state === 'open' ? 'bg-green-500' : 'bg-purple-500'}`} />
-                  {issue.number}
-                </td>
-                <td className="py-2 px-2 font-medium">
-                  {issue.title}
-                  {issue.comments > 0 && <span className="text-xs text-muted-foreground ml-1">{issue.comments}</span>}
-                </td>
-                <td className="py-2 px-2">
-                  {issue.labels.map(l => (
-                    <span
-                      key={l.name}
-                      className="inline-block text-xs px-1.5 py-0.5 rounded-full mr-1"
-                      style={{ background: `#${l.color}20`, color: `#${l.color}`, border: `1px solid #${l.color}40` }}
-                    >
-                      {l.name}
-                    </span>
-                  ))}
-                </td>
-                <td className="py-2 px-2 text-muted-foreground">{issue.assignee || ''}</td>
-                <td className="py-2 px-2 text-muted-foreground">
-                  {new Date(issue.updated_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                </td>
-              </tr>
+                <div className="flex items-start gap-2">
+                  <span className={`mt-1.5 inline-block w-2 h-2 rounded-full shrink-0 ${issue.state === 'open' ? 'bg-green-500' : 'bg-purple-500'}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-sm">{issue.title}</div>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                      <span>#{issue.number}</span>
+                      {issue.assignee && <span>{issue.assignee}</span>}
+                      <span>{new Date(issue.updated_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+                      {issue.comments > 0 && <span>{issue.comments} comments</span>}
+                    </div>
+                    {issue.labels.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {issue.labels.map(l => (
+                          <span
+                            key={l.name}
+                            className="inline-block text-xs px-1.5 py-0.5 rounded-full"
+                            style={{ background: `#${l.color}20`, color: `#${l.color}`, border: `1px solid #${l.color}40` }}
+                          >
+                            {l.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        </>
       )}
     </div>
   )
