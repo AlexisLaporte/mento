@@ -122,3 +122,11 @@
 .prose .highlight { background: oklch(0.15 0 0); border-radius: 8px; padding: 1rem; overflow-x: auto; margin: 0.75rem 0; }
 .task-list-item { list-style: none; margin-left: -1.5rem; }
 .task-list-item input[type="checkbox"] { margin-right: 0.5rem; }
+
+/* Copy button on code blocks */
+.prose pre { position: relative; }
+.prose pre .copy-btn { opacity: 0; transition: opacity 0.15s; }
+.prose pre:hover .copy-btn { opacity: 1; }
+
+/* Responsive images in prose */
+.prose img { max-width: 100%; height: auto; border-radius: 8px; }

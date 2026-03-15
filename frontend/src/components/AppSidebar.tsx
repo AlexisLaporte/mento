@@ -219,7 +219,7 @@ function ProjectSidebar({ project, activePath }: { project: string; activePath: 
   )
 }
 
-export function AppSidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose?: () => void }) {
+export function AppSidebar({ mobileOpen, onClose, onSearchOpen }: { mobileOpen?: boolean; onClose?: () => void; onSearchOpen?: () => void }) {
   const { user } = useAuth()
   const { context, project, subPath } = useAppContext()
   const location = useLocation()
@@ -254,6 +254,22 @@ export function AppSidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onCl
           </svg>
         </button>
       </div>
+
+      {/* Search button */}
+      {onSearchOpen && (
+        <div className="px-3 pt-2">
+          <button
+            onClick={onSearchOpen}
+            className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors border border-sidebar-border"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <span className="flex-1 text-left">Search...</span>
+            <kbd className="text-[10px] bg-sidebar-accent px-1 py-0.5 rounded hidden sm:inline">⌘K</kbd>
+          </button>
+        </div>
+      )}
 
       {/* Context-dependent navigation */}
       {context === 'dashboard' ? (

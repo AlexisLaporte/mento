@@ -4,6 +4,7 @@ interface TreeNode {
   name: string
   path: string
   type: 'file' | 'dir'
+  kind?: string
   children?: TreeNode[]
 }
 
@@ -11,6 +12,17 @@ interface FileTreeProps {
   nodes: TreeNode[]
   activePath: string | null
   onSelect: (path: string) => void
+}
+
+const KIND_ICON: Record<string, string> = {
+  image: '🖼',
+  pdf: '📕',
+  text: '📝',
+}
+
+function fileLabel(node: TreeNode): string {
+  if (node.kind === 'markdown') return node.name.replace(/\.md$/i, '')
+  return node.name
 }
 
 function TreeDir({ node, activePath, onSelect }: { node: TreeNode } & Omit<FileTreeProps, 'nodes'>) {
@@ -43,14 +55,17 @@ function TreeItem({ node, activePath, onSelect }: { node: TreeNode } & Omit<File
     return <TreeDir node={node} activePath={activePath} onSelect={onSelect} />
   }
   const isActive = node.path === activePath
+  const icon = node.kind && node.kind !== 'markdown' ? KIND_ICON[node.kind] : null
+
   return (
     <button
       onClick={() => onSelect(node.path)}
-      className={`block w-full text-left px-1.5 py-0.5 pl-5 rounded text-sm truncate ${
+      className={`flex items-center gap-1 w-full text-left px-1.5 py-0.5 pl-5 rounded text-sm truncate ${
         isActive ? 'bg-primary/15 text-primary font-medium' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
       }`}
     >
-      {node.name.replace(/\.md$/i, '')}
+      {icon && <span className="text-xs shrink-0">{icon}</span>}
+      <span className="truncate">{fileLabel(node)}</span>
     </button>
   )
 }
