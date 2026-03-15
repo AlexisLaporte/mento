@@ -1,3 +1,4 @@
+import { useRef, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '@/lib/api'
@@ -104,6 +105,8 @@ function ProjectSidebar({ project, activePath }: { project: string; activePath: 
   const navigate = useNavigate()
   const location = useLocation()
   const projectBase = `/${project}`
+  const [switcherOpen, setSwitcherOpen] = useState(false)
+  const switcherRef = useRef<HTMLDivElement>(null)
 
   const { data: tree = [] } = useQuery({
     queryKey: ['tree', project],
@@ -116,25 +119,66 @@ function ProjectSidebar({ project, activePath }: { project: string; activePath: 
     retry: false,
   })
 
+  const { data: allProjects = [] } = useQuery({
+    queryKey: ['projects'],
+    queryFn: () => apiGet<Project[]>('/api/projects'),
+  })
+
   const config = settings?.project
   const isOnIssues = location.pathname === `${projectBase}/issues`
   const isOnSettings = location.pathname === `${projectBase}/settings`
 
+  // Close switcher on click outside
+  useEffect(() => {
+    if (!switcherOpen) return
+    function handleClick(e: MouseEvent) {
+      if (switcherRef.current && !switcherRef.current.contains(e.target as Node)) {
+        setSwitcherOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [switcherOpen])
+
   return (
     <>
       <nav className="flex-1 overflow-y-auto px-3 py-2">
-        {/* Back to projects */}
-        <Link
-          to="/"
-          className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors mb-3"
-        >
-          ← Projects
-        </Link>
-
-        {/* Project header */}
-        <div className="flex items-center gap-2 px-2 mb-3">
-          {config && <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: config.color }} />}
-          <span className="font-semibold text-sm truncate">{config?.title || project}</span>
+        {/* Project switcher */}
+        <div className="relative mb-3" ref={switcherRef}>
+          <button
+            onClick={() => setSwitcherOpen(!switcherOpen)}
+            className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md hover:bg-sidebar-accent transition-colors"
+          >
+            {config && <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: config.color }} />}
+            <span className="font-semibold text-sm truncate flex-1 text-left">{config?.title || project}</span>
+            <svg className={`w-3.5 h-3.5 text-sidebar-foreground/40 transition-transform ${switcherOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {switcherOpen && (
+            <div className="absolute left-0 right-0 top-full mt-1 bg-sidebar border border-sidebar-border rounded-lg shadow-lg z-10 py-1 max-h-64 overflow-y-auto">
+              {allProjects.filter(p => p.slug !== project).map(p => (
+                <Link
+                  key={p.slug}
+                  to={`/${p.slug}/`}
+                  onClick={() => setSwitcherOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-1.5 text-sm hover:bg-sidebar-accent transition-colors"
+                >
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />
+                  <span className="truncate">{p.title}</span>
+                </Link>
+              ))}
+              <div className="border-t border-sidebar-border mt-1 pt-1">
+                <Link
+                  to="/"
+                  onClick={() => setSwitcherOpen(false)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                >
+                  ← All projects
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Docs section */}
@@ -175,21 +219,57 @@ function ProjectSidebar({ project, activePath }: { project: string; activePath: 
   )
 }
 
-export function AppSidebar() {
+export function AppSidebar({ mobileOpen, onClose, onSearchOpen }: { mobileOpen?: boolean; onClose?: () => void; onSearchOpen?: () => void }) {
   const { user } = useAuth()
   const { context, project, subPath } = useAppContext()
+  const location = useLocation()
+
+  // Close mobile sidebar on navigation
+  const prevPath = useRef(location.pathname)
+  useEffect(() => {
+    if (prevPath.current !== location.pathname) {
+      prevPath.current = location.pathname
+      onClose?.()
+    }
+  }, [location.pathname, onClose])
 
   if (!user) return null
 
   return (
-    <aside className="w-60 h-screen flex flex-col bg-sidebar border-r border-sidebar-border shrink-0">
+    <aside className={`
+      fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-sidebar border-r border-sidebar-border
+      transition-transform duration-200 ease-in-out
+      md:relative md:z-auto md:w-60 md:translate-x-0 md:shrink-0
+      ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+    `}>
       {/* Header */}
-      <div className="px-4 py-3 border-b border-sidebar-border">
+      <div className="px-4 py-3 border-b border-sidebar-border flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <img src="/logo-book.svg" alt="Memento" className="h-6 w-6" />
           <span className="text-base font-bold tracking-tight font-serif">Memento</span>
         </Link>
+        <button onClick={onClose} className="p-1 md:hidden" aria-label="Close menu">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
+
+      {/* Search button */}
+      {onSearchOpen && (
+        <div className="px-3 pt-2">
+          <button
+            onClick={onSearchOpen}
+            className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors border border-sidebar-border"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <span className="flex-1 text-left">Search...</span>
+            <kbd className="text-[10px] bg-sidebar-accent px-1 py-0.5 rounded hidden sm:inline">⌘K</kbd>
+          </button>
+        </div>
+      )}
 
       {/* Context-dependent navigation */}
       {context === 'dashboard' ? (

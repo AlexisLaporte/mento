@@ -33,7 +33,7 @@ export default function SettingsPage() {
   if (isLoading || !data) return <p className="text-center py-20 text-muted-foreground text-sm">Loading...</p>
 
   return (
-    <main className="max-w-3xl mx-auto px-6 pt-6 pb-20">
+    <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-20">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-lg font-semibold">Settings</h1>
         <Link to={`${projectBase}/`} className="text-sm text-primary hover:underline">Back to docs</Link>
@@ -78,7 +78,7 @@ function ProjectSettingsForm({ config, projectBase, queryClient }: {
     <div className="bg-card rounded-lg border p-4">
       <h2 className="text-sm font-semibold mb-3">Project settings</h2>
       <form onSubmit={e => { e.preventDefault(); mut.mutate() }} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid sm:grid-cols-2 gap-3">
           <div><Label className="text-xs">Title</Label><Input value={title} onChange={e => setTitle(e.target.value)} className="mt-1" /></div>
           <div><Label className="text-xs">Color</Label><Input type="color" value={color} onChange={e => setColor(e.target.value)} className="mt-1 h-9 w-20" /></div>
         </div>
@@ -127,7 +127,8 @@ function MembersSection({ members, projectBase, queryClient }: {
   return (
     <div>
       <h2 className="text-sm font-semibold mb-3">Members</h2>
-      <div className="bg-card rounded-lg border overflow-hidden mb-4">
+      {/* Desktop table */}
+      <div className="bg-card rounded-lg border overflow-hidden mb-4 hidden sm:block">
         <table className="w-full text-sm">
           <thead className="bg-muted text-xs text-muted-foreground uppercase">
             <tr><th className="px-4 py-2 text-left">Email</th><th className="px-4 py-2 text-left">Name</th><th className="px-4 py-2 text-left">Role</th><th className="px-4 py-2 text-left">Action</th></tr>
@@ -157,12 +158,34 @@ function MembersSection({ members, projectBase, queryClient }: {
         </table>
       </div>
 
+      {/* Mobile member cards */}
+      <div className="sm:hidden space-y-2 mb-4">
+        {members.map(m => (
+          <div key={m.email} className="bg-card rounded-lg border p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-medium truncate">{m.email}</span>
+              {roleBadge(m.role)}
+            </div>
+            {m.name && <p className="text-xs text-muted-foreground mb-2">{m.name}</p>}
+            <select
+              defaultValue={m.role}
+              onChange={e => roleMut.mutate({ email: m.email, role: e.target.value })}
+              className="text-xs border rounded px-2 py-1 w-full"
+            >
+              <option value="blocked">blocked</option>
+              <option value="member">member</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+        ))}
+      </div>
+
       <div className="bg-card rounded-lg border p-4">
         <h3 className="text-sm font-semibold mb-2">Invite user</h3>
-        <form onSubmit={e => { e.preventDefault(); inviteMut.mutate() }} className="flex gap-2 items-end">
-          <div><Label className="text-xs">Email</Label><Input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} type="email" required placeholder="user@example.com" className="mt-1 w-64" /></div>
-          <div><Label className="text-xs">Name</Label><Input value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="Optional" className="mt-1 w-48" /></div>
-          <Button type="submit" size="sm" disabled={inviteMut.isPending}>Invite</Button>
+        <form onSubmit={e => { e.preventDefault(); inviteMut.mutate() }} className="flex flex-col sm:flex-row gap-2 sm:items-end">
+          <div className="flex-1"><Label className="text-xs">Email</Label><Input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} type="email" required placeholder="user@example.com" className="mt-1" /></div>
+          <div className="flex-1"><Label className="text-xs">Name</Label><Input value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="Optional" className="mt-1" /></div>
+          <Button type="submit" size="sm" disabled={inviteMut.isPending} className="sm:w-auto">Invite</Button>
         </form>
       </div>
     </div>

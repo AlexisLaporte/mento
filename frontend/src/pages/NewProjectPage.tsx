@@ -131,7 +131,7 @@ export default function NewProjectPage() {
             <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="My Project" required className="mt-1" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label>Color</Label>
               <Input type="color" value={color} onChange={e => setColor(e.target.value)} className="mt-1 h-9 w-20" />

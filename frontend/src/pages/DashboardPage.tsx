@@ -17,7 +17,7 @@ export default function DashboardPage() {
   })
 
   return (
-    <main className="max-w-4xl mx-auto px-8 pt-10 pb-20">
+    <main className="max-w-4xl mx-auto px-4 sm:px-8 pt-6 sm:pt-10 pb-20">
       <h1 className="text-2xl font-bold tracking-tight font-serif mb-6" style={{ letterSpacing: '-0.02em' }}>
         Projects
       </h1>
