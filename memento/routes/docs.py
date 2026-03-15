@@ -4,6 +4,7 @@ import base64
 import re
 
 import markdown
+import nh3
 import yaml
 from flask import Blueprint, g, jsonify, request
 from httpx import HTTPStatusError
@@ -164,9 +165,29 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
 
 
 def _render_markdown(text: str) -> tuple[str, str]:
-    """Render markdown to HTML and return (html, toc_html)."""
+    """Render markdown to HTML, sanitize, and return (html, toc_html)."""
     _md.reset()
-    html = _md.convert(text)
+    raw_html = _md.convert(text)
+    html = nh3.clean(
+        raw_html,
+        tags=nh3.ALLOWED_TAGS | {
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'p', 'pre', 'code', 'blockquote', 'hr', 'br',
+            'table', 'thead', 'tbody', 'tr', 'th', 'td',
+            'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+            'img', 'div', 'span', 'details', 'summary',
+            'input', 'del', 'ins', 'sup', 'sub',
+        },
+        attributes={
+            '*': {'id', 'class', 'style'},
+            'a': {'href', 'title', 'target', 'rel'},
+            'img': {'src', 'alt', 'title', 'width', 'height'},
+            'input': {'type', 'checked', 'disabled'},
+            'td': {'colspan', 'rowspan', 'align'},
+            'th': {'colspan', 'rowspan', 'align'},
+            'code': {'class'},
+        },
+    )
     toc = getattr(_md, 'toc', '')
     return html, toc
 

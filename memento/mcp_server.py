@@ -144,6 +144,8 @@ def create_doc(
     """
     email = get_user_email()
     config = _check_write_access(email, project_slug)
+    if not _is_allowed(path, config.docs_paths, config.allowed_files):
+        raise ValueError(f"Path '{path}' is not within allowed docs paths")
     target_branch = branch or config.default_branch
     commit_message = message or f"Create {path}"
 
@@ -191,6 +193,8 @@ def update_doc(
     """
     email = get_user_email()
     config = _check_write_access(email, project_slug)
+    if not _is_allowed(path, config.docs_paths, config.allowed_files):
+        raise ValueError(f"Path '{path}' is not within allowed docs paths")
     target_branch = branch or config.default_branch
     commit_message = message or f"Update {path}"
 

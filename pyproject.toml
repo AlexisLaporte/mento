@@ -21,6 +21,7 @@ dependencies = [
     "resend>=2.0",
     "fastmcp>=2.0",
     "uvicorn>=0.30",
+    "nh3>=0.2",
 ]
 
 [tool.setuptools.packages.find]
