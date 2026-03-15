@@ -8,6 +8,7 @@ Auth identity via Auth0, access control per-project via explicit membership.
 import os
 from functools import wraps
 
+import httpx
 from flask import Blueprint, abort, g, jsonify, redirect, request, session, url_for
 
 from . import db
@@ -130,6 +131,39 @@ def callback():
     }
     next_url = session.pop('next', '/')
     return redirect(next_url)
+
+
+@auth_bp.route('/github')
+@requires_auth
+def github_connect():
+    """Redirect to GitHub OAuth to get a user-to-server token."""
+    client_id = os.getenv('GITHUB_APP_CLIENT_ID')
+    redirect_uri = url_for('auth.github_callback', _external=True)
+    return redirect(
+        f'https://github.com/login/oauth/authorize?client_id={client_id}&redirect_uri={redirect_uri}'
+    )
+
+
+@auth_bp.route('/github/callback')
+@requires_auth
+def github_callback():
+    """Exchange GitHub OAuth code for user access token."""
+    code = request.args.get('code')
+    if not code:
+        return redirect('/new')
+    resp = httpx.post(
+        'https://github.com/login/oauth/access_token',
+        data={
+            'client_id': os.getenv('GITHUB_APP_CLIENT_ID'),
+            'client_secret': os.getenv('GITHUB_APP_CLIENT_SECRET'),
+            'code': code,
+        },
+        headers={'Accept': 'application/json'},
+    )
+    token = resp.json().get('access_token')
+    if token:
+        session['github_token'] = token
+    return redirect('/new')
 
 
 @auth_bp.route('/logout')

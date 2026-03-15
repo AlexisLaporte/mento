@@ -7,37 +7,47 @@ from flask import Blueprint, jsonify, request, session
 
 from .. import db
 from ..auth import requires_auth
-from ..github_app import get_app_jwt, get_installation_token
 
 projects_bp = Blueprint('projects', __name__)
 
 _GITHUB_APP_NAME = os.getenv('GITHUB_APP_NAME', 'memento-document')
 
 
+def _github_headers() -> dict:
+    """Headers for GitHub API calls using the user's OAuth token."""
+    token = session.get('github_token', '')
+    return {'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json'}
+
+
 def _list_installations() -> list[dict]:
-    """List all GitHub App installations with account info."""
+    """List GitHub App installations accessible to the current user."""
+    token = session.get('github_token')
+    if not token:
+        return []
     try:
         resp = httpx.get(
-            'https://api.github.com/app/installations',
-            headers={'Authorization': f'Bearer {get_app_jwt()}', 'Accept': 'application/vnd.github+json'},
+            'https://api.github.com/user/installations',
+            headers=_github_headers(),
         )
         if resp.status_code != 200:
             return []
         return [
             {'id': inst['id'], 'account': inst['account']['login'], 'avatar': inst['account']['avatar_url']}
-            for inst in resp.json()
+            for inst in resp.json().get('installations', [])
         ]
     except Exception:
         return []
 
 
 def _list_repos_for_installation(installation_id: int) -> list[dict]:
-    """List repos accessible to a specific installation."""
+    """List repos accessible to the user for a specific installation."""
+    token = session.get('github_token')
+    if not token:
+        return []
     try:
-        token = get_installation_token(installation_id)
         resp = httpx.get(
-            'https://api.github.com/installation/repositories',
-            headers={'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json'},
+            f'https://api.github.com/user/installations/{installation_id}/repositories',
+            headers=_github_headers(),
             params={'per_page': '100'},
         )
         if resp.status_code != 200:
@@ -62,6 +72,7 @@ def api_me():
         "name": user['name'],
         "picture": user.get('picture', ''),
         "is_super_admin": user['email'] in admins,
+        "github_connected": bool(session.get('github_token')),
     })
 
 

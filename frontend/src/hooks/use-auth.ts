@@ -7,6 +7,7 @@ export interface User {
   name: string
   picture: string
   is_super_admin: boolean
+  github_connected: boolean
 }
 
 export function useAuth() {
