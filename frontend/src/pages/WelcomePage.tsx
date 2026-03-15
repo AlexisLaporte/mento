@@ -1,5 +1,6 @@
 import { motion, useInView } from 'framer-motion'
 import { useRef, useEffect, useState } from 'react'
+import { AppMockup } from '@/components/AppMockup'
 import { GitHubIcon, ShieldIcon, BotIcon } from '@/components/FeatureIcons'
 
 /* ─── Animations ──────────────────────────────────────────────────────────── */
@@ -46,13 +47,13 @@ const features = [
     icon: ShieldIcon,
     title: 'Team access control',
     desc: 'Invite members by email. Each project has its own roles — admin, member, blocked. The project owner manages everything.',
-    img: '/illust-collab.png',
+    img: '/illust-access.png',
   },
   {
     icon: BotIcon,
     title: 'AI-ready via MCP',
     desc: 'One URL connects Claude AI to your documentation. Your team queries docs in natural language, gets answers with sources.',
-    img: '/illust-review.png',
+    img: '/illust-startup.png',
   },
 ]
 
@@ -137,6 +138,18 @@ export default function WelcomePage() {
             </a>
           </motion.div>
         </div>
+
+        {/* Floating app mockup */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.5 }}
+          className="absolute bottom-8 right-8 w-80 lg:w-96 z-10 hidden md:block"
+        >
+          <div className="shadow-2xl rounded-2xl overflow-hidden border border-white/20">
+            <AppMockup />
+          </div>
+        </motion.div>
       </section>
 
       {/* Stats */}
