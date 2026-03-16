@@ -5,8 +5,9 @@ import os
 import httpx
 from flask import Blueprint, jsonify, request, session
 
-from .. import db
+from .. import db, repo
 from ..auth import requires_auth
+from ..github_app import github_api
 
 projects_bp = Blueprint('projects', __name__)
 
@@ -126,11 +127,25 @@ def api_create_project():
         docs_paths = [p.strip() for p in docs_paths.split(',') if p.strip()]
     color = data.get('color', '#6366F1').strip()
 
+    # Resolve default branch from GitHub (one-time call)
+    try:
+        repo_info = github_api(installation_id, f'/repos/{repo_full_name}')
+        default_branch = repo_info.get('default_branch', 'main')
+    except Exception:
+        default_branch = 'main'
+
     db.create_project(
         slug=slug, title=title, repo_full_name=repo_full_name,
         installation_id=installation_id, owner_email=user['email'],
-        docs_paths=docs_paths, color=color,
+        docs_paths=docs_paths, color=color, default_branch=default_branch,
     )
+
+    # Clone repo locally
+    try:
+        repo.clone_repo(slug, repo_full_name, installation_id, default_branch)
+    except Exception:
+        pass  # Project created in DB, clone can be retried via sync
+
     return jsonify({"slug": slug})
 
 

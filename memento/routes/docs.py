@@ -1,6 +1,5 @@
-"""Documentation file tree and markdown viewer — reads from GitHub Contents API."""
+"""Documentation file tree and markdown viewer — reads from local git clone."""
 
-import base64
 import re
 import time
 
@@ -8,18 +7,15 @@ import markdown
 import nh3
 import yaml
 from flask import Blueprint, Response, g, jsonify, request
-from httpx import HTTPStatusError
-
-import httpx
 
 from ..auth import requires_access
-from ..github_app import get_installation_token, github_api
+from .. import repo as git_repo
 
 
 # ─── TTL Cache ────────────────────────────────────────────────────────────────
 
 _cache: dict[str, tuple[float, object]] = {}
-_CACHE_TTL = 60  # seconds
+_CACHE_TTL = 30  # seconds (filesystem is fast, short TTL to avoid os.walk spam)
 
 
 def _cache_get(key: str) -> object | None:
@@ -32,12 +28,11 @@ def _cache_get(key: str) -> object | None:
 
 def _cache_set(key: str, value: object) -> None:
     _cache[key] = (time.monotonic() + _CACHE_TTL, value)
-    # Evict old entries if cache grows too large
     if len(_cache) > 500:
         now = time.monotonic()
-        expired = [k for k, (t, _) in _cache.items() if t <= now]
-        for k in expired:
+        for k in [k for k, (t, _) in _cache.items() if t <= now]:
             del _cache[k]
+
 
 docs_bp = Blueprint('docs', __name__)
 
@@ -88,7 +83,6 @@ def _is_allowed(path: str, docs_paths: list[str], allowed_files: list[str]) -> b
 
 
 def _file_kind(path: str) -> str:
-    """Return the kind of file: 'markdown', 'image', 'text', 'pdf', or 'unknown'."""
     lower = path.lower()
     if lower.endswith(('.md', '.markdown')):
         return 'markdown'
@@ -102,7 +96,7 @@ def _file_kind(path: str) -> str:
 
 
 def _build_tree(items: list[dict], docs_paths: list[str], allowed_files: list[str]) -> list[dict]:
-    """Build a nested tree from GitHub git/trees flat list."""
+    """Build a nested tree from flat file list."""
     filtered = []
     for item in items:
         if not _is_allowed(item['path'], docs_paths, allowed_files):
@@ -113,18 +107,15 @@ def _build_tree(items: list[dict], docs_paths: list[str], allowed_files: list[st
         elif item['type'] == 'tree':
             filtered.append(item)
 
-    # Build nested structure
     root: list[dict] = []
     dirs: dict[str, dict] = {}
 
-    # First pass: create all directory nodes
     for item in filtered:
         if item['type'] == 'tree':
             name = item['path'].split('/')[-1]
             node = {"name": name, "path": item['path'], "type": "dir", "children": []}
             dirs[item['path']] = node
 
-    # Second pass: add files and wire up children
     for item in filtered:
         name = item['path'].split('/')[-1]
         if item['type'] == 'blob':
@@ -142,7 +133,6 @@ def _build_tree(items: list[dict], docs_paths: list[str], allowed_files: list[st
             else:
                 root.append(dirs[item['path']])
 
-    # Remove empty directories
     def prune(nodes: list[dict]) -> list[dict]:
         result = []
         for node in nodes:
@@ -154,7 +144,6 @@ def _build_tree(items: list[dict], docs_paths: list[str], allowed_files: list[st
                 result.append(node)
         return result
 
-    # Sort: dirs first, then alpha
     def sort_tree(nodes: list[dict]) -> list[dict]:
         nodes.sort(key=lambda n: (n['type'] != 'dir', n['name'].lower()))
         for n in nodes:
@@ -166,7 +155,6 @@ def _build_tree(items: list[dict], docs_paths: list[str], allowed_files: list[st
 
 
 def _flatten_tree(nodes: list[dict]) -> list[dict]:
-    """Flatten a nested tree into a list of file nodes (in display order)."""
     result = []
     for node in nodes:
         if node['type'] == 'file':
@@ -177,7 +165,6 @@ def _flatten_tree(nodes: list[dict]) -> list[dict]:
 
 
 def _parse_frontmatter(text: str) -> tuple[dict, str]:
-    """Extract YAML frontmatter from markdown text."""
     if not text.startswith('---'):
         return {}, text
     end = text.find('---', 3)
@@ -192,7 +179,6 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
 
 
 def _render_markdown(text: str) -> tuple[str, str]:
-    """Render markdown to HTML, sanitize, and return (html, toc_html)."""
     _md.reset()
     raw_html = _md.convert(text)
     html = nh3.clean(
@@ -220,7 +206,6 @@ def _render_markdown(text: str) -> tuple[str, str]:
 
 
 def _extract_headings(html: str) -> list[dict]:
-    """Extract headings from rendered HTML for TOC."""
     pattern = re.compile(r'<h([2-4])\s*(?:id="([^"]*)")?\s*[^>]*>(.*?)</h\1>', re.IGNORECASE | re.DOTALL)
     headings = []
     for match in pattern.finditer(html):
@@ -237,7 +222,7 @@ def _extract_headings(html: str) -> list[dict]:
 @requires_access
 def api_tree():
     config = g.config
-    if not config.repo_full_name or not config.installation_id:
+    if not config.repo_full_name:
         return jsonify([])
 
     cache_key = f'tree:{config.slug}'
@@ -245,16 +230,11 @@ def api_tree():
     if cached is not None:
         return jsonify(cached)
 
-    try:
-        tree_data = github_api(
-            config.installation_id,
-            f'/repos/{config.repo_full_name}/git/trees/{config.default_branch}',
-            params={'recursive': '1'},
-        )
-    except HTTPStatusError as e:
-        return jsonify({"error": f"GitHub API error: {e.response.status_code}"}), 502
+    if not git_repo.repo_exists(config.slug):
+        return jsonify({"error": "Repository not synced yet"}), 503
 
-    nodes = _build_tree(tree_data.get('tree', []), config.docs_paths, config.allowed_files)
+    items = git_repo.list_files(config.slug)
+    nodes = _build_tree(items, config.docs_paths, config.allowed_files)
     _cache_set(cache_key, nodes)
     return jsonify(nodes)
 
@@ -263,8 +243,7 @@ def api_tree():
 @requires_access
 def api_doc(doc_path: str):
     config = g.config
-
-    if not config.repo_full_name or not config.installation_id:
+    if not config.repo_full_name:
         return jsonify({"error": "Repo not configured"}), 400
 
     if not _is_allowed(doc_path, config.docs_paths, config.allowed_files):
@@ -278,28 +257,20 @@ def api_doc(doc_path: str):
     kind = _file_kind(doc_path)
 
     try:
-        data = github_api(
-            config.installation_id,
-            f'/repos/{config.repo_full_name}/contents/{doc_path}',
-        )
-    except HTTPStatusError as e:
-        if e.response.status_code == 404:
-            return jsonify({"error": "Not found"}), 404
-        return jsonify({"error": f"GitHub API error: {e.response.status_code}"}), 502
+        raw = git_repo.read_file(config.slug, doc_path)
+    except FileNotFoundError:
+        return jsonify({"error": "Not found"}), 404
 
     if kind in ('image', 'pdf'):
-        slug = config.slug
         result = {
             "path": doc_path,
             "kind": kind,
-            "download_url": f'/{slug}/api/raw/{doc_path}',
-            "size": data.get('size', 0),
+            "download_url": f'/{config.slug}/api/raw/{doc_path}',
+            "size": len(raw),
         }
         _cache_set(cache_key, result)
         return jsonify(result)
 
-    # Text-based content (markdown or plain text)
-    raw = base64.b64decode(data['content'])
     content = raw.decode('utf-8', errors='replace')
 
     if kind == 'markdown':
@@ -316,7 +287,6 @@ def api_doc(doc_path: str):
         _cache_set(cache_key, result)
         return jsonify(result)
 
-    # Plain text / code files
     result = {
         "path": doc_path,
         "kind": "text",
@@ -338,9 +308,9 @@ _CONTENT_TYPES = {
 @docs_bp.route('/api/raw/<path:doc_path>')
 @requires_access
 def api_raw(doc_path: str):
-    """Proxy binary files (PDF, images) from GitHub with correct Content-Type."""
+    """Serve binary files (PDF, images) from local clone."""
     config = g.config
-    if not config.repo_full_name or not config.installation_id:
+    if not config.repo_full_name:
         return jsonify({"error": "Repo not configured"}), 400
     if not _is_allowed(doc_path, config.docs_paths, config.allowed_files):
         return jsonify({"error": "Not found"}), 404
@@ -349,25 +319,9 @@ def api_raw(doc_path: str):
     content_type = _CONTENT_TYPES.get(ext, 'application/octet-stream')
 
     try:
-        data = github_api(
-            config.installation_id,
-            f'/repos/{config.repo_full_name}/contents/{doc_path}',
-        )
-    except HTTPStatusError as e:
-        if e.response.status_code == 404:
-            return jsonify({"error": "Not found"}), 404
-        return jsonify({"error": f"GitHub API error: {e.response.status_code}"}), 502
-
-    if data.get('content'):
-        raw = base64.b64decode(data['content'])
-    elif data.get('download_url'):
-        # Large files (>1MB): GitHub Contents API omits base64 content
-        token = get_installation_token(config.installation_id)
-        resp = httpx.get(data['download_url'], headers={'Authorization': f'Bearer {token}'}, follow_redirects=True)
-        resp.raise_for_status()
-        raw = resp.content
-    else:
-        return jsonify({"error": "File content unavailable"}), 502
+        raw = git_repo.read_file(config.slug, doc_path)
+    except FileNotFoundError:
+        return jsonify({"error": "Not found"}), 404
 
     return Response(raw, content_type=content_type, headers={
         'Content-Disposition': 'inline',
@@ -378,26 +332,20 @@ def api_raw(doc_path: str):
 @docs_bp.route('/api/search')
 @requires_access
 def api_search():
-    """Search doc filenames and content in the repo."""
+    """Search doc filenames in the repo."""
     config = g.config
     q = request.args.get('q', '').strip()
-    if not q or not config.repo_full_name or not config.installation_id:
+    if not q or not config.repo_full_name:
         return jsonify([])
 
-    # Get tree for filename search
-    try:
-        tree_data = github_api(
-            config.installation_id,
-            f'/repos/{config.repo_full_name}/git/trees/{config.default_branch}',
-            params={'recursive': '1'},
-        )
-    except HTTPStatusError:
+    if not git_repo.repo_exists(config.slug):
         return jsonify([])
 
+    items = git_repo.list_files(config.slug)
     q_lower = q.lower()
     results = []
 
-    for item in tree_data.get('tree', []):
+    for item in items:
         if item['type'] != 'blob':
             continue
         if not _is_allowed(item['path'], config.docs_paths, config.allowed_files):
@@ -412,5 +360,4 @@ def api_search():
                 'kind': _file_kind(item['path']),
             })
 
-    # Limit results
     return jsonify(results[:20])

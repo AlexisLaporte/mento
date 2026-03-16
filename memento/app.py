@@ -22,7 +22,6 @@ def create_app() -> Flask:
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'memento-dev-secret')
 
     main_host = os.getenv('MEMENTO_HOST', 'memento.local')
-    _branch_cache: dict[str, str] = {}
 
     # Ensure DB schema
     from .db import ensure_schema
@@ -57,16 +56,6 @@ def create_app() -> Flask:
                 config = get_project(project)
                 if not config:
                     abort(404)
-                # Resolve default branch (cached)
-                if config.repo_full_name and config.installation_id:
-                    if project not in _branch_cache:
-                        try:
-                            from .github_app import github_api
-                            repo_info = github_api(config.installation_id, f'/repos/{config.repo_full_name}')
-                            _branch_cache[project] = repo_info.get('default_branch', 'main')
-                        except Exception:
-                            _branch_cache[project] = 'main'
-                    config.default_branch = _branch_cache[project]
                 g.project = project
                 g.config = config
 

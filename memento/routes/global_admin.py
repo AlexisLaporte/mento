@@ -7,7 +7,7 @@ import os
 from flask import Blueprint, abort, jsonify, request
 
 from ..auth import requires_super_admin
-from .. import db
+from .. import db, repo
 
 global_admin_bp = Blueprint('global_admin', __name__)
 
@@ -30,6 +30,7 @@ def api_admin_projects():
 @global_admin_bp.route('/api/admin/projects/<slug>', methods=['DELETE'])
 @requires_super_admin
 def api_admin_delete_project(slug):
+    repo.delete_repo(slug)
     db.delete_project(slug)
     return jsonify({"ok": True})
 
@@ -55,6 +56,17 @@ def webhook():
         action = payload.get('action')
         if action == 'created':
             pass
+
+    if event == 'push' and payload:
+        repo_full_name = payload.get('repository', {}).get('full_name', '')
+        if repo_full_name:
+            from ..routes.docs import _cache
+            for config in db.get_projects_by_repo(repo_full_name):
+                repo.pull_repo(config.slug, config.installation_id)
+                # Invalidate doc cache for this project
+                expired = [k for k in _cache if k.startswith(f'tree:{config.slug}') or k.startswith(f'doc:{config.slug}:')]
+                for k in expired:
+                    del _cache[k]
 
     return jsonify({"ok": True})
 

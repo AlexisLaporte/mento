@@ -11,6 +11,7 @@ from fastmcp import FastMCP
 
 from .config import ProjectConfig
 from .db import get_member, get_project, load_projects_for_user, member_exists
+from . import repo as git_repo
 from .github_app import github_api
 from .mcp_auth import create_auth_provider, get_user_email
 from .routes.docs import _build_tree, _is_allowed, _parse_frontmatter
@@ -21,20 +22,6 @@ mcp = FastMCP(
     auth=create_auth_provider(),
 )
 
-# Cache default branches per project slug
-_branch_cache: dict[str, str] = {}
-
-
-def _resolve_branch(config: ProjectConfig) -> str:
-    if config.slug not in _branch_cache:
-        try:
-            repo = github_api(config.installation_id, f'/repos/{config.repo_full_name}')
-            _branch_cache[config.slug] = repo.get('default_branch', 'main')
-        except Exception:
-            _branch_cache[config.slug] = 'main'
-    return _branch_cache[config.slug]
-
-
 def _check_access(email: str, slug: str) -> ProjectConfig:
     """Verify user has access to project, return config."""
     config = get_project(slug)
@@ -42,7 +29,8 @@ def _check_access(email: str, slug: str) -> ProjectConfig:
         raise ValueError(f"Project '{slug}' not found")
     if not member_exists(slug, email):
         raise ValueError(f"Access denied to '{slug}'")
-    config.default_branch = _resolve_branch(config)
+    if git_repo.repo_exists(slug):
+        config.default_branch = git_repo.resolve_default_branch(slug)
     return config
 
 
@@ -72,12 +60,8 @@ def get_doc_tree(project_slug: str) -> list[dict]:
     """Get the documentation file tree for a project."""
     email = get_user_email()
     config = _check_access(email, project_slug)
-    tree_data = github_api(
-        config.installation_id,
-        f'/repos/{config.repo_full_name}/git/trees/{config.default_branch}',
-        params={'recursive': '1'},
-    )
-    return _build_tree(tree_data.get('tree', []), config.docs_paths, config.allowed_files)
+    items = git_repo.list_files(project_slug)
+    return _build_tree(items, config.docs_paths, config.allowed_files)
 
 
 @mcp.tool
@@ -87,11 +71,8 @@ def read_doc(project_slug: str, path: str) -> dict:
     config = _check_access(email, project_slug)
     if not _is_allowed(path, config.docs_paths, config.allowed_files):
         raise ValueError(f"Path '{path}' is not accessible")
-    data = github_api(
-        config.installation_id,
-        f'/repos/{config.repo_full_name}/contents/{path}',
-    )
-    content = base64.b64decode(data['content']).decode('utf-8', errors='replace')
+    raw = git_repo.read_file(project_slug, path)
+    content = raw.decode('utf-8', errors='replace')
     fm, body = _parse_frontmatter(content)
     return {"path": path, "frontmatter": fm, "content": body}
 

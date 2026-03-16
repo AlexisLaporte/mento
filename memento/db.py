@@ -32,10 +32,9 @@ def ensure_schema():
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
-            # Migration: add custom_domain if missing
-            cur.execute("""
-                ALTER TABLE memento_projects ADD COLUMN IF NOT EXISTS custom_domain TEXT DEFAULT ''
-            """)
+            # Migrations
+            cur.execute("ALTER TABLE memento_projects ADD COLUMN IF NOT EXISTS custom_domain TEXT DEFAULT ''")
+            cur.execute("ALTER TABLE memento_projects ADD COLUMN IF NOT EXISTS default_branch TEXT DEFAULT 'main'")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS memento_members (
                     project_slug TEXT REFERENCES memento_projects(slug) ON DELETE CASCADE,
@@ -56,11 +55,12 @@ def _row_to_config(row) -> ProjectConfig:
         installation_id=row[3], owner_email=row[4] or '',
         docs_paths=row[5] or ['docs'], allowed_files=row[6] or [],
         color=row[7] or '#6366F1', custom_domain=row[8] or '',
+        default_branch=row[9] or 'main',
     )
 
 
 _PROJECT_COLS = """slug, title, repo_full_name, installation_id,
-    owner_email, docs_paths, allowed_files, color, custom_domain"""
+    owner_email, docs_paths, allowed_files, color, custom_domain, default_branch"""
 
 
 # ─── Projects CRUD ───────────────────────────────────────────────────────────
@@ -104,13 +104,14 @@ def create_project(slug: str, title: str, repo_full_name: str,
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO memento_projects (slug, title, repo_full_name, installation_id,
-                    owner_email, docs_paths, allowed_files, color)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    owner_email, docs_paths, allowed_files, color, default_branch)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 slug, title, repo_full_name, installation_id, owner_email,
                 kwargs.get('docs_paths', ['docs']),
                 kwargs.get('allowed_files', []),
                 kwargs.get('color', '#6366F1'),
+                kwargs.get('default_branch', 'main'),
             ))
             # Auto-add owner as admin
             cur.execute("""
@@ -143,6 +144,14 @@ def get_project_by_domain(domain: str) -> ProjectConfig | None:
             cur.execute(f"SELECT {_PROJECT_COLS} FROM memento_projects WHERE custom_domain = %s", (domain,))
             row = cur.fetchone()
             return _row_to_config(row) if row else None
+
+
+def get_projects_by_repo(repo_full_name: str) -> list[ProjectConfig]:
+    """Find all projects pointing to a given repo."""
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT {_PROJECT_COLS} FROM memento_projects WHERE repo_full_name = %s", (repo_full_name,))
+            return [_row_to_config(row) for row in cur.fetchall()]
 
 
 def delete_project(slug: str):
