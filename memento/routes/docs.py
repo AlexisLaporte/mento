@@ -2,6 +2,7 @@
 
 import base64
 import re
+import time
 
 import markdown
 import nh3
@@ -13,6 +14,30 @@ import httpx
 
 from ..auth import requires_access
 from ..github_app import get_installation_token, github_api
+
+
+# ─── TTL Cache ────────────────────────────────────────────────────────────────
+
+_cache: dict[str, tuple[float, object]] = {}
+_CACHE_TTL = 60  # seconds
+
+
+def _cache_get(key: str) -> object | None:
+    entry = _cache.get(key)
+    if entry and entry[0] > time.monotonic():
+        return entry[1]
+    _cache.pop(key, None)
+    return None
+
+
+def _cache_set(key: str, value: object) -> None:
+    _cache[key] = (time.monotonic() + _CACHE_TTL, value)
+    # Evict old entries if cache grows too large
+    if len(_cache) > 500:
+        now = time.monotonic()
+        expired = [k for k, (t, _) in _cache.items() if t <= now]
+        for k in expired:
+            del _cache[k]
 
 docs_bp = Blueprint('docs', __name__)
 
@@ -215,6 +240,11 @@ def api_tree():
     if not config.repo_full_name or not config.installation_id:
         return jsonify([])
 
+    cache_key = f'tree:{config.slug}'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+
     try:
         tree_data = github_api(
             config.installation_id,
@@ -225,6 +255,7 @@ def api_tree():
         return jsonify({"error": f"GitHub API error: {e.response.status_code}"}), 502
 
     nodes = _build_tree(tree_data.get('tree', []), config.docs_paths, config.allowed_files)
+    _cache_set(cache_key, nodes)
     return jsonify(nodes)
 
 
@@ -238,6 +269,11 @@ def api_doc(doc_path: str):
 
     if not _is_allowed(doc_path, config.docs_paths, config.allowed_files):
         return jsonify({"error": "Not found"}), 404
+
+    cache_key = f'doc:{config.slug}:{doc_path}'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
 
     kind = _file_kind(doc_path)
 
@@ -253,12 +289,14 @@ def api_doc(doc_path: str):
 
     if kind in ('image', 'pdf'):
         slug = config.slug
-        return jsonify({
+        result = {
             "path": doc_path,
             "kind": kind,
             "download_url": f'/{slug}/api/raw/{doc_path}',
             "size": data.get('size', 0),
-        })
+        }
+        _cache_set(cache_key, result)
+        return jsonify(result)
 
     # Text-based content (markdown or plain text)
     raw = base64.b64decode(data['content'])
@@ -268,21 +306,25 @@ def api_doc(doc_path: str):
         fm, body = _parse_frontmatter(content)
         html, toc_html = _render_markdown(body)
         headings = _extract_headings(html)
-        return jsonify({
+        result = {
             "path": doc_path,
             "kind": "markdown",
             "frontmatter": fm,
             "html": html,
             "toc": headings,
-        })
+        }
+        _cache_set(cache_key, result)
+        return jsonify(result)
 
     # Plain text / code files
-    return jsonify({
+    result = {
         "path": doc_path,
         "kind": "text",
         "content": content,
         "size": len(raw),
-    })
+    }
+    _cache_set(cache_key, result)
+    return jsonify(result)
 
 
 _CONTENT_TYPES = {
