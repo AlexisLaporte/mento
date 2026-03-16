@@ -320,15 +320,17 @@ export default function WelcomePage() {
       {/* Footer */}
       <footer className="max-w-6xl mx-auto px-4 sm:px-8 py-8 border-t border-foreground/[0.06]">
         <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <img src="/logo-book.svg" alt="Mento" className="h-5 w-5" />
-          <span className="text-sm font-medium tracking-tight font-serif">Mento</span>
-        </div>
-          <p className="text-xs text-muted-foreground">
-            <a href="https://github.com/AlexisLaporte/memento" className="hover:text-foreground transition" target="_blank">
-              GitHub
-            </a>
-          </p>
+          <div className="flex items-center gap-2">
+            <img src="/logo-book.svg" alt="Mento" className="h-5 w-5" />
+            <span className="text-sm font-medium tracking-tight font-serif">Mento</span>
+          </div>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <a href="/help" className="hover:text-foreground transition">Help</a>
+            <a href="/legal" className="hover:text-foreground transition">Legal</a>
+            <a href="/privacy" className="hover:text-foreground transition">Privacy</a>
+            <a href="/terms" className="hover:text-foreground transition">Terms</a>
+            <a href="https://github.com/AlexisLaporte/memento" className="hover:text-foreground transition" target="_blank">GitHub</a>
+          </div>
         </div>
       </footer>
     </div>

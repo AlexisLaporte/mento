@@ -11,6 +11,7 @@ import DocPage from '@/pages/DocPage'
 import IssuesPage from '@/pages/IssuesPage'
 import SettingsPage from '@/pages/SettingsPage'
 import HelpPage from '@/pages/HelpPage'
+import { LegalNoticePage, PrivacyPage, TermsPage } from '@/pages/LegalPage'
 
 export default function App() {
   const { isLoading, isAuthenticated } = useAuth()
@@ -41,9 +42,13 @@ export default function App() {
 
   const { pathname } = useLocation()
 
-  if (pathname === '/help') {
-    return <HelpPage />
+  const publicPages: Record<string, React.ReactNode> = {
+    '/help': <HelpPage />,
+    '/legal': <LegalNoticePage />,
+    '/privacy': <PrivacyPage />,
+    '/terms': <TermsPage />,
   }
+  if (publicPages[pathname]) return <>{publicPages[pathname]}</>
 
   if (!isAuthenticated) {
     return <WelcomePage />
