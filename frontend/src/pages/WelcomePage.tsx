@@ -1,5 +1,4 @@
-import { motion, useInView } from 'framer-motion'
-import { useRef, useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import { AppMockup } from '@/components/AppMockup'
 import { GitHubIcon, ShieldIcon, BotIcon } from '@/components/FeatureIcons'
 
@@ -13,26 +12,6 @@ const fadeUp = {
   }),
 }
 
-function AnimatedNumber({ value, suffix = '' }: { value: number; suffix?: string }) {
-  const ref = useRef<HTMLSpanElement>(null)
-  const inView = useInView(ref, { once: true })
-  const [display, setDisplay] = useState(0)
-
-  useEffect(() => {
-    if (!inView) return
-    let start = 0
-    const duration = 1200
-    const step = (ts: number) => {
-      if (!start) start = ts
-      const progress = Math.min((ts - start) / duration, 1)
-      setDisplay(Math.floor(progress * value))
-      if (progress < 1) requestAnimationFrame(step)
-    }
-    requestAnimationFrame(step)
-  }, [inView, value])
-
-  return <span ref={ref}>{display}{suffix}</span>
-}
 
 function Img({ src, alt = '', className }: { src: string; alt?: string; className?: string }) {
   const webp = src.replace(/\.png$/, '.webp')
@@ -67,13 +46,6 @@ const features = [
   },
 ]
 
-const stats = [
-  { value: 5, suffix: '+', label: 'Active projects' },
-  { value: 100, suffix: '%', label: 'Markdown support' },
-  { value: 4, suffix: '', label: 'MCP tools' },
-  { value: 0, suffix: '', label: 'Config files needed', display: '0' },
-]
-
 const steps = [
   { num: '01', title: 'Sign in', desc: 'Authenticate with your account in one click.' },
   { num: '02', title: 'Create a project', desc: 'Pick a GitHub repo. Name your project, choose your docs folder.' },
@@ -91,7 +63,7 @@ const useCases = [
 
 export default function WelcomePage() {
   return (
-    <div className="min-h-screen bg-background overflow-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Hero — full-width image */}
       <section className="relative min-h-[90vh] flex items-center">
         {/* Background image */}
@@ -162,25 +134,6 @@ export default function WelcomePage() {
         </motion.div>
       </section>
 
-      {/* Stats */}
-      <section className="border-y border-foreground/[0.06]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((s, i) => (
-              <motion.div
-                key={s.label}
-                variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i}
-                className="text-center"
-              >
-                <div className="text-3xl md:text-4xl font-bold font-serif text-primary">
-                  {s.display ?? <AnimatedNumber value={s.value} suffix={s.suffix} />}
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">{s.label}</div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Features */}
       <section id="features" className="max-w-6xl mx-auto px-4 sm:px-8 py-24 md:py-32">
