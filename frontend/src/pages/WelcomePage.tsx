@@ -115,8 +115,8 @@ export default function WelcomePage() {
             <a href="/auth/login?next=/" className="text-sm font-medium bg-white text-foreground px-7 py-3 rounded-full hover:bg-white/90 transition">
               Get started
             </a>
-            <a href="#features" className="text-sm font-medium border border-white/30 text-white px-7 py-3 rounded-full hover:bg-white/10 transition">
-              Learn more
+            <a href="/mento/" className="text-sm font-medium border border-white/30 text-white px-7 py-3 rounded-full hover:bg-white/10 transition">
+              See demo
             </a>
           </motion.div>
         </div>
@@ -282,7 +282,7 @@ export default function WelcomePage() {
             <a href="/legal" className="hover:text-foreground transition">Legal</a>
             <a href="/privacy" className="hover:text-foreground transition">Privacy</a>
             <a href="/terms" className="hover:text-foreground transition">Terms</a>
-            <a href="https://github.com/AlexisLaporte/memento" className="hover:text-foreground transition" target="_blank">GitHub</a>
+            <a href="https://github.com/AlexisLaporte/mento" className="hover:text-foreground transition" target="_blank">GitHub</a>
           </div>
         </div>
       </footer>
