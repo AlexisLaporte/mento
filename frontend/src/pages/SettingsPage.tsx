@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator'
 interface ProjectConfig {
   slug: string; title: string; color: string; repo_full_name: string
   docs_paths: string[]; allowed_files: string[]; owner_email: string; custom_domain: string
+  is_public: boolean
 }
 interface Member {
   email: string; name: string; picture: string; role: string; created_at: string
@@ -63,6 +64,7 @@ function ProjectSettingsForm({ config, projectBase, queryClient }: {
   const [docsPaths, setDocsPaths] = useState(config.docs_paths.join(','))
   const [allowedFiles, setAllowedFiles] = useState(config.allowed_files.join(','))
   const [customDomain, setCustomDomain] = useState(config.custom_domain)
+  const [isPublic, setIsPublic] = useState(config.is_public)
 
   const mut = useMutation({
     mutationFn: () => apiPut(`${projectBase}/api/settings`, {
@@ -70,6 +72,7 @@ function ProjectSettingsForm({ config, projectBase, queryClient }: {
       docs_paths: docsPaths.split(',').map(s => s.trim()).filter(Boolean),
       allowed_files: allowedFiles.split(',').map(s => s.trim()).filter(Boolean),
       custom_domain: customDomain.trim(),
+      is_public: isPublic,
     }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings'] }),
   })
@@ -88,6 +91,13 @@ function ProjectSettingsForm({ config, projectBase, queryClient }: {
           <Label className="text-xs">Custom domain</Label>
           <Input value={customDomain} onChange={e => setCustomDomain(e.target.value)} placeholder="docs.example.com" className="mt-1" />
           <p className="text-xs text-muted-foreground mt-1">Point a CNAME to <code className="text-primary">mento.cc</code> in your DNS</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={isPublic} onChange={e => setIsPublic(e.target.checked)} className="rounded border-input" />
+            <span className="text-xs font-medium">Public access</span>
+          </label>
+          <span className="text-xs text-muted-foreground">Anyone can view docs without signing in</span>
         </div>
         <div className="flex items-center gap-3">
           <Button type="submit" size="sm" disabled={mut.isPending}>{mut.isPending ? 'Saving...' : 'Save settings'}</Button>

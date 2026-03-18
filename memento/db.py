@@ -35,6 +35,7 @@ def ensure_schema():
             # Migrations
             cur.execute("ALTER TABLE memento_projects ADD COLUMN IF NOT EXISTS custom_domain TEXT DEFAULT ''")
             cur.execute("ALTER TABLE memento_projects ADD COLUMN IF NOT EXISTS default_branch TEXT DEFAULT 'main'")
+            cur.execute("ALTER TABLE memento_projects ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT FALSE")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS memento_members (
                     project_slug TEXT REFERENCES memento_projects(slug) ON DELETE CASCADE,
@@ -66,11 +67,12 @@ def _row_to_config(row) -> ProjectConfig:
         docs_paths=row[5] or ['docs'], allowed_files=row[6] or [],
         color=row[7] or '#6366F1', custom_domain=row[8] or '',
         default_branch=row[9] or 'main',
+        is_public=row[10] if len(row) > 10 else False,
     )
 
 
 _PROJECT_COLS = """slug, title, repo_full_name, installation_id,
-    owner_email, docs_paths, allowed_files, color, custom_domain, default_branch"""
+    owner_email, docs_paths, allowed_files, color, custom_domain, default_branch, is_public"""
 
 
 # ─── Projects CRUD ───────────────────────────────────────────────────────────
@@ -135,7 +137,7 @@ def create_project(slug: str, title: str, repo_full_name: str,
 def update_project(slug: str, **kwargs):
     """Update project fields."""
     allowed = {'title', 'repo_full_name', 'installation_id', 'docs_paths',
-               'allowed_files', 'color', 'custom_domain'}
+               'allowed_files', 'color', 'custom_domain', 'is_public'}
     updates = {k: v for k, v in kwargs.items() if k in allowed}
     if not updates:
         return

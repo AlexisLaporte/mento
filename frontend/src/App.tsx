@@ -50,7 +50,11 @@ export default function App() {
   }
   if (publicPages[pathname]) return <>{publicPages[pathname]}</>
 
-  if (!isAuthenticated) {
+  // Allow project routes without auth (public projects handled by backend)
+  const isProjectRoute = /^\/[a-z0-9-]+/.test(pathname) &&
+    !['/', '/new', '/admin', '/help', '/legal', '/privacy', '/terms'].includes(pathname)
+
+  if (!isAuthenticated && !isProjectRoute) {
     return <WelcomePage />
   }
 

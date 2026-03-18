@@ -55,6 +55,15 @@ def requires_access(f):
     """Require authenticated + authorized user for the current project."""
     @wraps(f)
     def decorated(*args, **kwargs):
+        # Public projects: allow anonymous read access
+        if getattr(g, 'config', None) and g.config.is_public:
+            user = session.get('user')
+            if user and db.member_exists(g.project, user['email']):
+                g.user_role = db.upsert_member(g.project, user['email'], user['name'], user.get('picture', ''))
+            else:
+                g.user_role = 'viewer'
+            return f(*args, **kwargs)
+
         user = session.get('user')
         if not user:
             if request.is_json or request.path.startswith(f'/{g.project}/api/'):

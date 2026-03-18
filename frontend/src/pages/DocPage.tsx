@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { apiGet } from '@/lib/api'
+import { apiGet, ApiError } from '@/lib/api'
 import { DocViewer } from '@/components/DocViewer'
 import { TocSidebar } from '@/components/TocSidebar'
 
@@ -67,9 +67,10 @@ export default function DocPage() {
     retry: false,
   })
 
-  const { data: tree = [] } = useQuery({
+  const { data: tree = [], error: treeError } = useQuery({
     queryKey: ['tree', project],
     queryFn: () => apiGet<TreeNode[]>(`${projectBase}/api/tree`),
+    retry: (count, err) => !(err instanceof ApiError && (err.status === 401 || err.status === 403)) && count < 2,
   })
 
   const flatFiles = useMemo(() => flattenTree(tree), [tree])
@@ -85,6 +86,21 @@ export default function DocPage() {
   const currentDoc = docPath ? (doc || null) : null
   const stats = useMemo(() => countFiles(tree), [tree])
   const readmeFile = flatFiles.find(f => /^readme\.md$/i.test(f.name))
+
+  // Auth required — private project, not logged in
+  if (treeError instanceof ApiError && (treeError.status === 401 || treeError.status === 403)) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h2 className="text-xl font-semibold">Sign in required</h2>
+          <p className="text-muted-foreground text-sm">You need to be a member to access this project.</p>
+          <a href="/auth/login" className="inline-block px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90 transition">
+            Sign in
+          </a>
+        </div>
+      </div>
+    )
+  }
 
   // Project home — no doc selected
   if (!docPath) {

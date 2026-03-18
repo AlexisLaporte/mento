@@ -30,6 +30,7 @@ def api_get_settings():
             "allowed_files": config.allowed_files,
             "owner_email": config.owner_email,
             "custom_domain": config.custom_domain,
+            "is_public": config.is_public,
         },
         "members": members,
         "is_owner": _is_owner(),
@@ -50,6 +51,7 @@ def api_update_settings():
         docs_paths=data.get('docs_paths', g.config.docs_paths),
         allowed_files=data.get('allowed_files', g.config.allowed_files),
         custom_domain=data.get('custom_domain', g.config.custom_domain),
+        is_public=data.get('is_public', g.config.is_public),
     )
     return jsonify({"ok": True})
 

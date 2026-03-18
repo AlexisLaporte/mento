@@ -258,7 +258,9 @@ export function AppSidebar({ mobileOpen, onClose, onSearchOpen }: { mobileOpen?:
     return () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp) }
   }, [width])
 
-  if (!user) return null
+  // Show sidebar for authenticated users, or for project context (public projects)
+  const showSidebar = !!user || context === 'project'
+  if (!showSidebar) return null
 
   return (
     <aside
@@ -311,25 +313,34 @@ export function AppSidebar({ mobileOpen, onClose, onSearchOpen }: { mobileOpen?:
         <ProjectSidebar project={project!} activePath={subPath} />
       )}
 
-      {/* Footer — user */}
+      {/* Footer — user or sign in */}
       <div className="px-3 py-3 border-t border-sidebar-border">
-        <div className="flex items-center gap-2.5 px-1">
-          <Avatar className="h-6 w-6">
-            <AvatarImage src={user.picture} />
-            <AvatarFallback className="text-[10px] bg-sidebar-accent">
-              {getInitials(user.name, user.email)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium leading-tight truncate">{user.name || user.email}</div>
+        {user ? (
+          <div className="flex items-center gap-2.5 px-1">
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={user.picture} />
+              <AvatarFallback className="text-[10px] bg-sidebar-accent">
+                {getInitials(user.name, user.email)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium leading-tight truncate">{user.name || user.email}</div>
+            </div>
+            <a
+              href="/auth/logout"
+              className="text-xs text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors"
+            >
+              Sign out
+            </a>
           </div>
+        ) : (
           <a
-            href="/auth/logout"
-            className="text-xs text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors"
+            href="/auth/login"
+            className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent transition-colors"
           >
-            Sign out
+            Sign in
           </a>
-        </div>
+        )}
       </div>
     </aside>
   )

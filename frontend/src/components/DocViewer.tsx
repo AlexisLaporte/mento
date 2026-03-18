@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import mammoth from 'mammoth'
 
 interface DocData {
   path: string
@@ -88,6 +89,74 @@ function PdfViewer({ doc }: { doc: DocData }) {
       >
         Open in new tab
       </a>
+    </div>
+  )
+}
+
+function DocxViewer({ doc }: { doc: DocData }) {
+  const [html, setHtml] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const convert = useCallback(async () => {
+    if (!doc.download_url) return
+    try {
+      const res = await fetch(doc.download_url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const arrayBuffer = await res.arrayBuffer()
+      const result = await mammoth.convertToHtml({ arrayBuffer })
+      setHtml(result.value)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load document')
+    }
+  }, [doc.download_url])
+
+  useEffect(() => { convert() }, [convert])
+
+  const fileName = doc.path.split('/').pop() || ''
+
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-4 md:p-6">
+      <div className="mb-4 pb-3 border-b">
+        <h1 className="text-xl font-bold">{fileName}</h1>
+        <div className="flex items-center gap-3 mt-1">
+          <span className="text-xs text-muted-foreground font-mono">{doc.path}</span>
+          {doc.download_url && (
+            <a href={doc.download_url} download={fileName} className="text-xs text-primary hover:underline">
+              Download
+            </a>
+          )}
+        </div>
+      </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      {!html && !error && <p className="text-sm text-muted-foreground">Loading...</p>}
+      {html && <div className="prose" dangerouslySetInnerHTML={{ __html: html }} />}
+    </div>
+  )
+}
+
+function BinaryViewer({ doc }: { doc: DocData }) {
+  const fileName = doc.path.split('/').pop() || ''
+  const ext = fileName.includes('.') ? fileName.split('.').pop()?.toUpperCase() : 'FILE'
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center p-6 gap-4">
+      <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center text-2xl font-bold text-muted-foreground">
+        .{ext?.toLowerCase()}
+      </div>
+      <div className="text-center">
+        <p className="font-medium">{fileName}</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {ext} file {doc.size ? `— ${(doc.size / 1024).toFixed(1)} KB` : ''}
+        </p>
+      </div>
+      {doc.download_url && (
+        <a
+          href={doc.download_url}
+          download={fileName}
+          className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          Download
+        </a>
+      )}
     </div>
   )
 }
@@ -234,6 +303,8 @@ export function DocViewer({
   if (doc.kind === 'image') return <ImageViewer doc={doc} />
   if (doc.kind === 'text') return <TextViewer doc={doc} />
   if (doc.kind === 'pdf') return <PdfViewer doc={doc} />
+  if (doc.kind === 'docx') return <DocxViewer doc={doc} />
+  if (doc.kind === 'binary') return <BinaryViewer doc={doc} />
 
   const fm = doc.frontmatter || {}
   const title = fm.title || doc.path.split('/').pop()?.replace(/\.md$/, '') || ''

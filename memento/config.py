@@ -16,3 +16,4 @@ class ProjectConfig:
     color: str = "#6366F1"
     custom_domain: str = ""
     default_branch: str = "main"
+    is_public: bool = False

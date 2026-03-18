@@ -48,16 +48,6 @@ _md = markdown.Markdown(extensions=[
     'toc': {'toc_depth': '2-4'},
 })
 
-# Supported file extensions beyond markdown
-_SUPPORTED_EXTENSIONS = (
-    '.md', '.markdown',
-    '.txt', '.text', '.csv', '.json', '.yaml', '.yml', '.toml', '.xml',
-    '.py', '.js', '.ts', '.jsx', '.tsx', '.go', '.rs', '.java', '.rb', '.sh', '.bash',
-    '.html', '.css', '.sql', '.dockerfile', '.makefile',
-    '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.bmp',
-    '.pdf',
-)
-
 _IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.bmp')
 _TEXT_EXTENSIONS = (
     '.txt', '.text', '.csv', '.json', '.yaml', '.yml', '.toml', '.xml',
@@ -90,9 +80,11 @@ def _file_kind(path: str) -> str:
         return 'image'
     if lower.endswith('.pdf'):
         return 'pdf'
+    if lower.endswith(('.docx',)):
+        return 'docx'
     if lower.endswith(_TEXT_EXTENSIONS):
         return 'text'
-    return 'unknown'
+    return 'binary'
 
 
 def _build_tree(items: list[dict], docs_paths: list[str], allowed_files: list[str]) -> list[dict]:
@@ -101,11 +93,7 @@ def _build_tree(items: list[dict], docs_paths: list[str], allowed_files: list[st
     for item in items:
         if not _is_allowed(item['path'], docs_paths, allowed_files):
             continue
-        if item['type'] == 'blob':
-            if item['path'].lower().endswith(_SUPPORTED_EXTENSIONS):
-                filtered.append(item)
-        elif item['type'] == 'tree':
-            filtered.append(item)
+        filtered.append(item)
 
     root: list[dict] = []
     dirs: dict[str, dict] = {}
@@ -261,7 +249,7 @@ def api_doc(doc_path: str):
     except FileNotFoundError:
         return jsonify({"error": "Not found"}), 404
 
-    if kind in ('image', 'pdf'):
+    if kind in ('image', 'pdf', 'docx', 'binary'):
         result = {
             "path": doc_path,
             "kind": kind,
@@ -302,6 +290,7 @@ _CONTENT_TYPES = {
     '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
     '.gif': 'image/gif', '.svg': 'image/svg+xml', '.webp': 'image/webp',
     '.ico': 'image/x-icon', '.bmp': 'image/bmp',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 }
 
 
@@ -349,8 +338,6 @@ def api_search():
         if item['type'] != 'blob':
             continue
         if not _is_allowed(item['path'], config.docs_paths, config.allowed_files):
-            continue
-        if not item['path'].lower().endswith(_SUPPORTED_EXTENSIONS):
             continue
         name = item['path'].split('/')[-1]
         if q_lower in name.lower() or q_lower in item['path'].lower():
