@@ -1,6 +1,7 @@
 """Project listing, self-service creation, and user info (JSON APIs)."""
 
 import os
+import re
 
 import httpx
 from flask import Blueprint, jsonify, request, session
@@ -104,8 +105,16 @@ def api_create_project():
     title = data.get('title', '').strip()
     repo_full_name = data.get('repo', '').strip()
 
-    if not slug or not title or not repo_full_name or '/' not in repo_full_name:
+    if not slug or not title or not repo_full_name:
         return jsonify({"error": "slug, title, and repo are required"}), 400
+
+    # Validate slug: only lowercase alphanumeric and hyphens
+    if not re.match(r'^[a-z0-9-]+$', slug):
+        return jsonify({"error": "Slug can only contain lowercase letters, numbers, and hyphens"}), 400
+
+    # Validate repo_full_name: owner/repo format
+    if not re.match(r'^[a-zA-Z0-9-._]+/[a-zA-Z0-9-._]+$', repo_full_name):
+        return jsonify({"error": "Invalid repository format (expected owner/repo)"}), 400
 
     if db.get_project(slug):
         return jsonify({"error": "Project slug already exists"}), 409
