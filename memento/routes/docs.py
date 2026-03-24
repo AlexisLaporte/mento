@@ -60,6 +60,11 @@ _TEXT_EXTENSIONS = (
 
 def _is_allowed(path: str, docs_paths: list[str], allowed_files: list[str]) -> bool:
     """Check if a path is under docs_paths or is an allowed root file."""
+    # Normalize path and prevent directory traversal
+    path = path.replace('\\', '/')
+    if '..' in path.split('/'):
+        return False
+
     if '/' in docs_paths:
         return True
     parts = path.split('/')
