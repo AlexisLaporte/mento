@@ -82,9 +82,11 @@ def list_files(slug: str) -> list[dict]:
 
 def read_file(slug: str, path: str) -> bytes:
     """Read raw bytes from repo. Raises FileNotFoundError if missing."""
-    full = os.path.join(repo_path(slug), path)
-    # Prevent path traversal
-    if not os.path.realpath(full).startswith(os.path.realpath(repo_path(slug))):
+    base = os.path.realpath(repo_path(slug))
+    full = os.path.realpath(os.path.join(base, path))
+    # Prevent path traversal - ensure the resolved path is within the base directory.
+    # We use commonpath to avoid prefix-matching vulnerabilities (e.g., 'app' vs 'app-secrets').
+    if os.path.commonpath([base, full]) != base:
         raise FileNotFoundError(f'Invalid path: {path}')
     with open(full, 'rb') as f:
         return f.read()
