@@ -12,6 +12,13 @@ log = logging.getLogger(__name__)
 REPOS_DIR = os.getenv('MEMENTO_REPOS_DIR', '/opt/memento/repos')
 
 
+def _redact(text: str, token: str) -> str:
+    """Replace sensitive token in text with [REDACTED]."""
+    if not token:
+        return text
+    return text.replace(token, '[REDACTED]')
+
+
 def repo_path(slug: str) -> str:
     return os.path.join(REPOS_DIR, slug)
 
@@ -35,7 +42,8 @@ def clone_repo(slug: str, repo_full_name: str, installation_id: int, branch: str
         capture_output=True, text=True, timeout=120,
     )
     if result.returncode != 0:
-        raise RuntimeError(f'git clone failed: {result.stderr.strip()}')
+        err = _redact(result.stderr.strip(), token)
+        raise RuntimeError(f'git clone failed: {err}')
     log.info('Cloned %s → %s', repo_full_name, dest)
 
 
@@ -54,7 +62,8 @@ def pull_repo(slug: str, installation_id: int) -> None:
     if result.returncode == 0:
         log.info('Pulled %s', slug)
     else:
-        log.warning('Pull failed for %s: %s', slug, result.stderr.strip())
+        err = _redact(result.stderr.strip(), token)
+        log.warning('Pull failed for %s: %s', slug, err)
 
 
 def delete_repo(slug: str) -> None:
