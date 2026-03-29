@@ -7,6 +7,7 @@ Auth identity via Auth0, access control per-project via explicit membership.
 
 import os
 from functools import wraps
+from urllib.parse import urlparse
 
 import httpx
 from flask import Blueprint, abort, g, jsonify, redirect, request, session, url_for
@@ -35,6 +36,17 @@ def init_auth(app):
         server_metadata_url=f'https://{auth0_domain}/.well-known/openid-configuration',
         client_kwargs={'scope': 'openid profile email'},
     )
+
+
+def _is_safe_url(target):
+    """Ensure the URL is safe for redirection (same host or relative)."""
+    if not target:
+        return False
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(target)
+    # Allow relative URLs (no netloc) or URLs with the same netloc
+    return test_url.scheme in ('', 'http', 'https') and \
+        (not test_url.netloc or test_url.netloc == ref_url.netloc)
 
 
 # ─── Decorators ───────────────────────────────────────────────────────────────
@@ -121,6 +133,8 @@ def requires_super_admin(f):
 @auth_bp.route('/login')
 def login():
     next_url = request.args.get('next') or session.get('next', '/')
+    if not _is_safe_url(next_url):
+        next_url = '/'
     session['next'] = next_url
     redirect_uri = url_for('auth.callback', _external=True)
     return oauth.auth0.authorize_redirect(redirect_uri)
@@ -139,6 +153,8 @@ def callback():
     session['user'] = {'email': email, 'name': name, 'picture': picture}
     db.upsert_user(email, name, picture, auth0_sub=userinfo.get('sub', ''))
     next_url = session.pop('next', '/')
+    if not _is_safe_url(next_url):
+        next_url = '/'
     return redirect(next_url)
 
 
