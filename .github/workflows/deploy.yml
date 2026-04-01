@@ -9,7 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to server
-        run: |
-          echo "${{ secrets.SSH_DEPLOY_KEY }}" > /tmp/deploy_key && chmod 600 /tmp/deploy_key
-          ssh -o StrictHostKeyChecking=no -i /tmp/deploy_key root@51.15.225.121 "deploy"
-          rm /tmp/deploy_key
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 51.15.225.121
+          username: root
+          key: ${{ secrets.SSH_DEPLOY_KEY }}
+          script: |
+            cd /opt/memento
+            git pull origin master
+            ./venv/bin/pip install -r requirements.txt -q
+            cd frontend && npm ci --silent && npm run build
+            systemctl restart memento memento-mcp

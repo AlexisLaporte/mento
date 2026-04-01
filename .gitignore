@@ -5,3 +5,5 @@ __pycache__/
 *.pem
 frontend/node_modules/
 frontend/dist/
+Procfile
+infra/
