@@ -16,7 +16,8 @@ jobs:
           key: ${{ secrets.SSH_DEPLOY_KEY }}
           script: |
             cd /opt/mento
-            git clean -fd
+            rm -f README.md
+            git clean -fdx
             git fetch origin master
             git reset --hard origin/master
             ./venv/bin/pip install -e . -q
